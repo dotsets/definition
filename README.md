@@ -961,6 +961,36 @@ The above, is invalid. As `axioms` have no member domain named `Complex`.
 
 > This is similar to "importing" from other modules in programming languages.
 
+Now an implementation can expose a superset, instead of magically defining a function or domain. For instance
+
+```sets
+// base.sets
+u = {...}
+U = u
+phi = {}
+Phi = phi
+union({A sub u}, {B sub u}, ...): // ...
+intersect({A sub u}, {B sub u}, ...): //...
+///... others
+```
+
+And the implementation for instance (dummy code) could
+
+```go
+_ = ctx.Scope.Domains.Add(constants.BaseDomainPath)
+```
+
+This allows any code that uses the implementation for transpiling or diagnostics (like an lsp server) to perform
+
+```sets
+phi sub base
+u sub base
+union sub base
+intersect sub base
+```
+
+Instead of relying the implementation to make the symbols special and handle differently.
+
 ### 13. Source and Target Independence
 
 A `.sets` representation describes a domain independently of the language from which the domain originated.
