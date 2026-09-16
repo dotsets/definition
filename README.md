@@ -179,3 +179,162 @@ product2(A, B): {(x, y) suchthat x in A and y in B}
 ```
 
 This is where `.sets` becomes meaningful.
+
+## Specification
+
+### 1. Grammar
+
+`.sets` uses very similar grammar to LaTeX. That is intentional.
+
+**1. Every statement is a declaration**
+
+There is nothing in `.sets` that is not a declaration. Every statement itself is a declaration.
+
+**2. A declaration is either a domain or a function**
+
+**3. A top level declaration without an assignment is a unique domain**
+
+Example
+```sets
+String
+Integer
+Real
+Character
+```
+The above each represent a domain each.
+
+
+**4. Every top level unique domain are disjoint**
+
+From \#3, `intersect(String, Integer) = phi`.
+
+However, the following is not inherently disjoint in relative to the other sets.
+
+```sets
+Number = union(Integer, Real)
+```
+
+**5. Building sets**
+
+The fundamental object in `.sets` is a domain. An anonymous domain can be constructed with `{}` (curly braces).
+
+`.sets` support both rooster notation and builder notation. 
+
+Rooster notation: `{1, 2, 3, 4}`.
+Builder notation is explained in a different section.
+
+### 2. Domains
+
+Declaring domains is one of the central purposes of `.sets`. We start with reserved contextually relevant keywords:
+> Contextually relevant because you don't need to shy away from using the keywords, can be used just fine, as their meaning is context dependent.
+
+#### Reserved Keywords
+
+- `not`: negation of any conditional.
+- `in`: lvalue to be a member of rvalue. rvalue must be a domain.
+- `suchthat`: used to elaborate on a named element's properties. used in domain builder notation.
+- `sub`: used to check if lhs is a sub domain of rhs.
+- `and`: logical and operation.
+- `or`: logical or operation.
+- `Phi` or `phi`: an empty domain.
+- `u` or `U`: the universal domain.
+
+#### Using domain builder notation
+
+Set builder notation follows a couple of simple rules
+1. Describe the form of the elements, scalar, vector or tuple.
+2. Followed by `suchthat` to start describing the right properties of the element itself
+
+Example:
+
+```sets
+EventNumbers = {
+    x suchthat x in union(Integer, Real) and x%2 = 0
+}
+```
+
+#### Special sets
+
+An empty domain is effectively `{}`. There is a reserved keyword for this `Phi` or `phi`. Which is effectively just an alias to `{}`.
+```sets
+Phi = {}
+phi = Phi
+```
+
+Universal domain is a domain of all known and unknown elements. Represented primarily as `{ ... }`, whitespace doesn't matter. Similarly `.sets` understands the alias `U` or `u`.
+```sets
+U = {...}
+u = U
+```
+
+One concept worth pointing out now, there is a reason `{...}` is chosen over `{x}` for a universal domain. `{x}` is different from `{...}`. 
+Generally `{x suchthat` the `suchthat` that follows spreads the elements' domain. If there is no description of the domain, `{x}` becomes a domain with just one element, therefore can not contain any element from the domain of discourse. `...` is the variadic symbol in `.sets` used in different situations.
+
+### 3. Functions 
+
+Write an identifier, or called name of the function normally. Followed by parenthesis to accept the input. Functions don't follow a ` = ` syntax, rather it uses `:` to separate the lhs from the rhs.
+
+Example
+```sets
+f(): {}
+```
+
+Here `f` is a function that always evaluates to `phi`.
+
+##### Understanding parameters
+
+The language has an inherently quirky parameter passing grammar.
+
+A function can work over a scalar, vector (essentially single element) or a domain.
+
+In general, all parameters to a function is considered to be a domain. 
+
+```sets
+f(x): x * 2
+```
+
+In the above example, `.sets` will look for a domain aliased `x`, if can't find one, the code is invalid.
+
+This is because every function works over a domain. The passed value at callsite will be validated through a simple `in` predicate.
+
+So when `f` is called like `f(2)`, first check that happens is `2 in x`, if `x` is not a valid domain, the function becomes a transformation over an unknown domain, which is invalid.
+
+The right way to write the function would be
+```sets
+f({x suchthat x in Number}): x*2
+```
+
+Seperate multiple parameters with comma.
+
+If you want to allow any element, use the universal set.
+
+```sets
+f({x suchthat x in u}): x
+```
+
+##### Calling a function
+
+Calling a function is as simple as the same, followed by parenthesis. Inside the parenthesis, the arguments.
+
+
+There can be two types of functions.
+
+**1. Transformers**
+
+These kinds of functions produce either a scalar, a vector, or another domain, from `n` number of inputs where `n >=0`.
+
+The key is that transformers produce some output. The rhs becomes what a transformer returns. So wrapping in `()` makes it return a vector, wrapping in `{}` returns a domain, otherwise a scalar.
+
+**2. Predicates**
+
+Predicates are functions that don't return a value, just answers a question.
+Think of predicates as functions that return `true` or `false` like much of the other programming languages.
+
+From the transformer example, every function call goes through one predicate naturally, we can name it as such
+
+```sets
+Belongs({x suchthat x in u}, y sub u): x in y
+```
+
+This predicate bridges the gap between the callsite and the declaration. `x` being the concrete argument, `y` being the declared domain.
+
