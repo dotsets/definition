@@ -34,7 +34,8 @@ This document elaborates `.sets` representation definition.
     * [Universal domain](#universal-domain)
   * [10. Domain Axioms](#10-domain-axioms)
   * [11. Domain Validation](#11-domain-validation)
-  * [12. Source and Target Independence](#12-source-and-target-independence)
+  * [12. `.sets` files as super-domains](#12-sets-files-as-super-domains)
+  * [13. Source and Target Independence](#13-source-and-target-independence)
 
 <!-- mtoc-end -->
 
@@ -933,7 +934,34 @@ f({x suchthat x in u}): ...
 
 This is intentional. `.sets` is domain-first and does not introduce dynamic or unknown domains to defer semantic decisions until a later stage.
 
-### 12. Source and Target Independence
+### 12. `.sets` files as super-domains
+
+Each `.set` file is a superdomain. The name of the file becomes the name of the domain.
+
+Therefore one file named `axioms.sets`, containing
+```sets
+String
+Integer
+Real
+Number = union(Integer, Real) // implementation defines union
+```
+
+Another file `any.sets` can perform
+```sets
+Integer sub axioms
+```
+
+This top level sub declares, not defines, declares that `Integer` is a subdomain of `axioms`. 
+
+```sets
+Complex sub axioms
+```
+
+The above, is invalid. As `axioms` have no member domain named `Complex`.
+
+> This is similar to "importing" from other modules in programming languages.
+
+### 13. Source and Target Independence
 
 A `.sets` representation describes a domain independently of the language from which the domain originated.
 
