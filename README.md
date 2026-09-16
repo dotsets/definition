@@ -472,7 +472,9 @@ while `Number` and `Integer` are not disjoint.
 
 > TIP: to have a parameter accept a domain itself, use `sub u` trick. This marks the patrameter a subdomain of the universal domain, making the parameter itself a domain.
 > This is different from using `in u`, since while being a element of `u` *could* mean a domain, but it also allows effectively anything and everything.
-> Instead use `f(A sub u): 1 in A` to make `A` a domain to be passed.
+> Instead use `f({A sub u}): 1 in A` to make `A` a domain to be passed.
+> Using `A sub u` is still a domain itself, and argument will be checked against the resulting domain. Use
+> `{}` to capture that `sub u` domain inside another anonymous domain to force the parameter to be a domain itself.
 
 #### Logical operations
 
@@ -511,7 +513,7 @@ These functions can come predefined, depending on the language adapter implement
 `union` constructs a domain containing elements belonging to any of its input domains.
 
 ```sets
-union(A, B)
+union({A sub u}, {B sub u})
 ```
 
 is equivalent to:
@@ -523,7 +525,7 @@ is equivalent to:
 `union` accepts a variable number of domains.
 
 ```sets
-union(A sub u, B sub u, C sub u, ...):
+union({A sub u}, {B sub u}, {C sub u}, ...):
 ```
 
 The domains supplied to `union` do not need to be disjoint.
@@ -548,7 +550,7 @@ produces:
 `difference` constructs a domain containing elements belonging to the first domain but not the second.
 
 ```sets
-difference(A sub u, B sub u):
+difference({A sub u}, {B sub u}):
 ```
 
 is equivalent to:
@@ -562,7 +564,7 @@ is equivalent to:
 `intersect` constructs a domain containing elements common to all supplied domains.
 
 ```sets
-intersect(A sub U, B sub U):
+intersect({A sub U}, {B sub U}):
 ```
 
 is equivalent to:
@@ -580,7 +582,7 @@ difference(
 The operation can be extended to multiple domains.
 
 ```sets
-intersect(A sub u, B sub u, C sub u, ...)
+intersect({A sub u}, {B sub u}, {C sub u}, ...)
 ```
 
 The result is a domain containing only elements that belong to every supplied domain.
@@ -592,13 +594,13 @@ The result is a domain containing only elements that belong to every supplied do
 For two domains:
 
 ```sets
-product2(A sub u, B sub u)
+product2({A sub u}, {B sub u})
 ```
 
 can be represented as:
 
 ```sets
-product2(A sub u, B sub u): {
+product2([A sub u}, {B sub u}): {
     (x, y) suchthat x in A and y in B
 }
 ```
@@ -766,6 +768,10 @@ One = {
 This demonstrates that equality does not need to be a separate domain construction primitive. It can be expressed through membership in a singleton domain.
 
 > It is critical to understand, `.sets` has no capability to define cardinality of a domain yet. So a call like `singleton({1, 2})` is totally valid based on the transformation parameter domain itself.
+> An implementation may be cardinality aware for diagnostic purposes, but the language grammar does not recognize it.
+> For example a domain using roster notation can have its cardinality tracked under the diagnostic system to further limit callsite usage.
+> `Foo = { 1, 2, 3 }`, a function `f({x sub or = Foo}): x%2 = 0`, at callsite `f({1, 2, 3, 4})` would be invalid without evaluating
+> the expression, through cardinality of parameter domain and argument domain.
 
 ### 9. Special Domains
 
