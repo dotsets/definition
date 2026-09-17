@@ -9,11 +9,11 @@ This document elaborates `.sets` representation definition.
 * [Purpose](#purpose)
   * [Proposed solution](#proposed-solution)
 * [Specification](#specification)
-  * [1. Grammar](#1-grammar)
+  * [Grammar](#grammar)
   * [2. Domains](#2-domains)
     * [Reserved Keywords](#reserved-keywords)
     * [Using domain builder notation](#using-domain-builder-notation)
-    * [Special sets](#special-sets)
+    * [Special domains](#special-domains)
   * [3. Functions ](#3-functions-)
     * [Understanding parameters](#understanding-parameters)
       * [Calling a function](#calling-a-function)
@@ -27,23 +27,19 @@ This document elaborates `.sets` representation definition.
     * [Intersection](#intersection)
     * [Product](#product)
   * [6. Tuples and Vectors](#6-tuples-and-vectors)
-  * [7. Domain Builder Notation](#7-domain-builder-notation)
-  * [8. Singleton Domains](#8-singleton-domains)
-  * [9. Special Domains](#9-special-domains)
-    * [Empty domain](#empty-domain)
-    * [Universal domain](#universal-domain)
-  * [10. Domain Axioms](#10-domain-axioms)
-  * [11. Domain Validation](#11-domain-validation)
-  * [12. `.sets` files as super-domains](#12-sets-files-as-super-domains)
-  * [13. Source and Target Independence](#13-source-and-target-independence)
+  * [7. Singleton Domains](#7-singleton-domains)
+  * [8. Domain Axioms](#8-domain-axioms)
+  * [9. Domain Validation](#9-domain-validation)
+  * [10. `.sets` files as super-domains](#10-sets-files-as-super-domains)
+  * [11. Source and Target Independence](#11-source-and-target-independence)
 
 <!-- mtoc-end -->
 
 ## Purpose
 
-`.sets`  is a domain representation of the type information collected from anyetsource language.
+`.sets`  is a domain representation of the type information collected from any source language.
 
-I wanted to convert `typescript` types to `Golang` for a project of mine. But soon enough, crossed a fundamental issue of language barriers. Deterministic transfomation was becoming more complicated.
+I wanted to convert `typescript` types to `Golang` for a project of mine. But soon enough, crossed a fundamental issue of language barrier. Deterministic transfomation was becoming more complicated.
 
 Eventually I crossed a specific problem. "Intersections".
 
@@ -58,9 +54,8 @@ type Foo = string | number;
 This is easier to understand, `const x: Foo = 1` or `const x: Foo = ''`. 
 
 But consider the following type
+
 ```ts
-
-
 type Person = { name: string };
 type Aged = { age: number };
 type Human = Person | Aged;
@@ -145,14 +140,14 @@ That brings me to the proposed solution.
 The previous `Human` example could be written as
 
 ```sets
-// disjoint sets, don't require defining
-String
-RealNumber
+// disjoint domains, don't require defining
+String sub base
+RealNumber sub base
 
 // defining here as example but are part of standard operation also defined in sets lang.
-union(A, B, ...): union({x suchthat x in A or x in B}, ...)
-difference(A, B): {x suchthat x in A and x not in B}
-intersect(A, B, ...): intersect(
+union({A sub u}, {B sub u}, ...): union({x suchthat x in A or x in B}, ...)
+difference({A sub u}, {B sub u}): {x suchthat x in A and x not in B}
+intersect({A sub u}, {B sub u}, ...): intersect(
     difference(
         union(A, B),
         union(
@@ -186,7 +181,7 @@ Here `("abc")` is under valid domain `Person`. While `(123)` is under `Aged`.
 
 Wheras `("abc", 123)` is different. let's untangle the math here.
 
-`union(Person, Aged)` expands to `{x suchthat x in Person or x in Aged}`, the kind of `x` here and in `("abc", 123)` in fight. Our input is a tuple or a vector, but the union works on scalars.
+`union(Person, Aged)` expands to `{x suchthat x in Person or x in Aged}`, the kind of `x` here and in `("abc", 123)`, are in fight. Our input is a tuple or a vector, but the union works on scalars.
 
 `Person` using vector elements makes sense. `{name: string}` is not the same as a `string` scalar. However, when we are considering an intersected domain, language specifics come into play.
 
@@ -194,32 +189,35 @@ We are trying to remove language specific flattening because they have no place 
 
 And the transpiler of the specific language-to-sets is responsible for constructing the right domain off of its language knowledge, instead of constructing the visually similar representation.
 
-Another way to represt this would be
+Another way to represent this would be
 
 ```sets
-Human = {(x, y) suchthat (x) in Person or (y) in Aged or ((x), (y)) in product2(Person, Aged)} // nested tuples because that's what Person and Aged are
+Human = {(x, y) suchthat 
+    (x) in Person or
+    (y) in Aged or 
+    ((x), (y)) in product2(Person, Aged)} // nested tuples because that's what Person and Aged are
 
 // while product being
-product2(A, B): {(x, y) suchthat x in A and y in B}
+product2({A sub u}, {B sub u}): {(x, y) suchthat x in A and y in B}
 ```
-
 
 Or,
 
 ```sets
-Human = {(x, y) suchthat (x) in Person or (y) in Aged or (x, y) in product2(String, RealNumber)} // flattening Person and RealNumber domains
+Human = {(x, y) suchthat 
+    (x) in Person or 
+    (y) in Aged or 
+    (x, y) in product2(String, RealNumber)} // flattening Person and RealNumber domains
 
 // while product being
-product2(A, B): {(x, y) suchthat x in A and y in B}
+product2({A sub u}, {B sub u}): {(x, y) suchthat x in A and y in B}
 ```
 
 This is where `.sets` becomes meaningful.
 
 ## Specification
 
-### 1. Grammar
-
-`.sets` uses very similar grammar to LaTeX. That is intentional.
+### Grammar
 
 **1. Every statement is a declaration**
 
@@ -238,24 +236,23 @@ Character
 ```
 The above each represent a domain each.
 
-
 **4. Every top level unique domain are disjoint**
 
 From \#3, `intersect(String, Integer) = phi`.
 
-However, the following is not inherently disjoint in relative to the other sets.
+However, the following is not inherently disjoint in relative to the other domains.
 
 ```sets
 Number = union(Integer, Real)
 ```
 
-**5. Building sets**
+**5. Building domains**
 
 The fundamental object in `.sets` is a domain. An anonymous domain can be constructed with `{}` (curly braces).
 
-`.sets` support both rooster notation and builder notation. 
+`.sets` support both roster notation and builder notation. 
 
-Rooster notation: `{1, 2, 3, 4}`.
+Roster notation: `{1, 2, 3, 4}`.
 Builder notation is explained in a different section.
 
 ### 2. Domains
@@ -276,19 +273,19 @@ Declaring domains is one of the central purposes of `.sets`. We start with reser
 
 #### Using domain builder notation
 
-Set builder notation follows a couple of simple rules
+Domain builder notation follows a couple of simple rules
 1. Describe the form of the elements, scalar, vector or tuple.
 2. Followed by `suchthat` to start describing the right properties of the element itself
 
 Example:
 
 ```sets
-EventNumbers = {
+EvenNumbers = {
     x suchthat x in union(Integer, Real) and x%2 = 0
 }
 ```
 
-#### Special sets
+#### Special domains
 
 An empty domain is effectively `{}`. There is a reserved keyword for this `Phi` or `phi`. Which is effectively just an alias to `{}`.
 ```sets
@@ -472,9 +469,13 @@ while `Number` and `Integer` are not disjoint.
 `sub` operates on domains, while `in` operates on elements and domains.
 
 > TIP: to have a parameter accept a domain itself, use `sub u` trick. This marks the patrameter a subdomain of the universal domain, making the parameter itself a domain.
+
 > This is different from using `in u`, since while being a element of `u` *could* mean a domain, but it also allows effectively anything and everything.
+
 > Instead use `f({A sub u}): 1 in A` to make `A` a domain to be passed.
+
 > Using `A sub u` is still a domain itself, and argument will be checked against the resulting domain. Use
+
 > `{}` to capture that `sub u` domain inside another anonymous domain to force the parameter to be a domain itself.
 
 #### Logical operations
@@ -601,7 +602,7 @@ product2({A sub u}, {B sub u})
 can be represented as:
 
 ```sets
-product2([A sub u}, {B sub u}): {
+product2({A sub u}, {B sub u}): {
     (x, y) suchthat x in A and y in B
 }
 ```
@@ -686,49 +687,7 @@ This distinction is important when representing structural types. `.sets` does n
 
 Whether a target language represents a tuple as fields, an embedded structure, an array, or another representation is a concern of the target-language transformation and is not implied by the tuple itself.
 
-### 7. Domain Builder Notation
-
-Domain builder notation describes the possible elements of a domain.
-
-The general form is:
-
-```sets
-{
-    element suchthat condition
-}
-```
-
-The expression before `suchthat` describes the form of the elements.
-
-The condition after `suchthat` describes the properties those elements must satisfy.
-
-For example:
-
-```sets
-EvenNumbers = {
-    x suchthat x in Integer and x % 2 = 0
-}
-```
-
-The elements of `EvenNumbers` are integers satisfying the given condition.
-
-The element expression may describe a scalar:
-
-```sets
-{x suchthat x in Integer}
-```
-
-or a tuple:
-
-```sets
-{(x, y) suchthat x in Integer and y in String}
-```
-
-The latter describes a domain whose members are tuples.
-
-The distinction between the element expression and its conditions is important. `suchthat` does not merely introduce a boolean filter; it establishes the domain over which the described element is considered.
-
-### 8. Singleton Domains
+### 7. Singleton Domains
 
 A singleton domain contains exactly one element.
 
@@ -769,88 +728,16 @@ One = {
 This demonstrates that equality does not need to be a separate domain construction primitive. It can be expressed through membership in a singleton domain.
 
 > It is critical to understand, `.sets` has no capability to define cardinality of a domain yet. So a call like `singleton({1, 2})` is totally valid based on the transformation parameter domain itself.
+
 > An implementation may be cardinality aware for diagnostic purposes, but the language grammar does not recognize it.
+
 > For example a domain using roster notation can have its cardinality tracked under the diagnostic system to further limit callsite usage.
+
 > `Foo = { 1, 2, 3 }`, a function `f({x sub or = Foo}): x%2 = 0`, at callsite `f({1, 2, 3, 4})` would be invalid without evaluating
+
 > the expression, through cardinality of parameter domain and argument domain.
 
-### 9. Special Domains
-
-`.sets` defines two special domains.
-
-#### Empty domain
-
-The empty domain contains no elements.
-
-It is represented by:
-
-```sets
-{}
-```
-
-`Phi` and `phi` are aliases for the empty domain.
-
-```sets
-Phi = {}
-phi = Phi
-```
-
-Therefore:
-
-```sets
-intersect(A, Phi) = Phi
-```
-
-for any domain `A`.
-
-The empty domain is a subdomain of every domain.
-
-```sets
-Phi sub A
-```
-
-is true for every domain `A`.
-
-#### Universal domain
-
-The universal domain contains all known and unknown elements in the domain of discourse.
-
-It is represented by:
-
-```sets
-{...}
-```
-
-`U` and `u` are aliases for the universal domain.
-
-```sets
-U = {...}
-u = U
-```
-
-The distinction between `{...}` and `{x}` is intentional.
-
-```sets
-{x}
-```
-
-is a singleton domain containing `x`.
-
-It does not mean an arbitrary domain containing `x`.
-
-The `...` notation indicates that the domain is not restricted to the explicitly represented element.
-
-Therefore:
-
-```sets
-{x} sub U
-```
-
-is true, while `U` itself cannot be reduced to a singleton.
-
-`...` is also the variadic symbol used elsewhere in `.sets`. Its exact meaning depends on the construct in which it appears.
-
-### 10. Domain Axioms
+### 8. Domain Axioms
 
 Some domains are introduced without an assignment.
 
@@ -899,7 +786,7 @@ while:
 intersect(Integer, Real) = Phi
 ```
 
-### 11. Domain Validation
+### 9. Domain Validation
 
 `.sets` does not permit unknown domains.
 
@@ -934,7 +821,7 @@ f({x suchthat x in u}): ...
 
 This is intentional. `.sets` is domain-first and does not introduce dynamic or unknown domains to defer semantic decisions until a later stage.
 
-### 12. `.sets` files as super-domains
+### 10. `.sets` files as super-domains
 
 Each `.set` file is a superdomain. The name of the file becomes the name of the domain.
 
@@ -991,7 +878,7 @@ intersect sub base
 
 Instead of relying the implementation to make the symbols special and handle differently.
 
-### 13. Source and Target Independence
+### 11. Source and Target Independence
 
 A `.sets` representation describes a domain independently of the language from which the domain originated.
 
