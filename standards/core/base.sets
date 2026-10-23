@@ -1,0 +1,110 @@
+// base.sets: the `base` superdomain.
+//
+// Every .sets file imports what it needs from here (`String in base`,
+// `union in base`). An implementation exposes this file instead of making
+// these symbols special (GUIDE, "`.sets` files are superdomains").
+//
+// Source adapters reuse these domains; target adapters bind them by the
+// meaning given in standards/core/VALUE-MODEL.md, never by the language a
+// file came from.
+
+// ---------------------------------------------------------------------
+// Universal and empty domains (GUIDE "universal domain", "phi")
+// ---------------------------------------------------------------------
+
+u = { x suchthat x in {x} }
+U = u
+phi = {}
+Phi = phi
+
+// ---------------------------------------------------------------------
+// Domain operations (GUIDE "Domain operations built on axioms")
+// ---------------------------------------------------------------------
+
+singleton({x suchthat x in u}): {x}
+union({A sub u}, {B sub u}): { x suchthat x in A or x in B }
+intersect({A sub u}, {B sub u}): { x suchthat x in A and x in B }
+difference({A sub u}, {B sub u}): { x suchthat x in A and x not in B }
+product2({A sub u}, {B sub u}): { (x, y) suchthat x in A and y in B }
+
+// ---------------------------------------------------------------------
+// Top-level axioms. These are pairwise disjoint (VM-AX-1).
+// ---------------------------------------------------------------------
+
+String
+Integer
+Fractional
+
+Real = union(Integer, Fractional)
+
+// ---------------------------------------------------------------------
+// Atom rosters (VM-AX-3, VM-AX-4)
+// ---------------------------------------------------------------------
+
+Boolean = {true, false}
+Null = {null}
+IEEESpecial = {NaN, PositiveInfinity, NegativeInfinity, NegativeZero}
+
+// ---------------------------------------------------------------------
+// Described subdomains. `X sub Y` declares X with members drawn from Y
+// (GUIDE "Difference between `sub` and `in` in this context");
+// VALUE-MODEL.md §4 fixes exactly which members of Y belong to X.
+// ---------------------------------------------------------------------
+
+Char sub String
+
+Natural sub Integer
+Int64 sub Integer
+Int32 sub Int64
+Int16 sub Int32
+Int8 sub Int16
+Uint64 sub Natural
+Uint32 sub Uint64
+Uint16 sub Uint32
+Uint8 sub Uint16
+
+Binary64Finite sub Real
+Binary32Finite sub Binary64Finite
+
+Float64 = union(Binary64Finite, IEEESpecial)
+Float32 = union(Binary32Finite, IEEESpecial)
+
+// ---------------------------------------------------------------------
+// Collections (VALUE-MODEL.md §5)
+// ---------------------------------------------------------------------
+
+// Finite sequences as nested pairs ending in the empty tuple:
+// [] is (), [a, b] is (a, (b, ())).
+EmptySeq = {()}
+Seq({T sub u}): union(EmptySeq, { (h, t) suchthat h in T and t in Seq(T) })
+
+// Finite subdomains of T.
+SetOf({T sub u}): { s suchthat s sub T }
+
+// Finite sets of (key, value) pairs with unique keys (VM-MAP-1).
+Map({K sub u}, {V sub u}): { m suchthat m sub product2(K, V) }
+
+// ---------------------------------------------------------------------
+// Records (VALUE-MODEL.md §5.1). A record is a set of (key, value)
+// tuples with string keys. Record domains are open unless they say
+// otherwise.
+// ---------------------------------------------------------------------
+
+Record = Map(String, u)
+
+// Records whose fields with a key in K, if present, hold a value in V.
+OptionalField({K sub u}, {V sub u}): {
+    r suchthat
+    r in Record and
+    r not in { s suchthat (k, v) in s and k in K and v not in V }
+}
+
+// Records with no keys outside K (closed records).
+OnlyKeys({K sub u}): { r suchthat r in Record and r sub product2(K, u) }
+
+// ---------------------------------------------------------------------
+// Tagged variants (VALUE-MODEL.md §5.3). T is normally a singleton atom
+// domain such as {Circle}.
+// ---------------------------------------------------------------------
+
+Variant({T sub u}, {P sub u}): product2(T, P)

@@ -1,0 +1,30 @@
+// 09-intersection-difference: intersect, record intersection, difference, not in.
+// Rules: CS-INT-1, CS-REF-1, CT-INT-1, CT-DIF-1, CT-BLD-2
+//
+// Abstract source:
+//   Small     = int8 & uint8
+//   Named     = { name: text };  Dated = { at: text };  Stamped = Named & Dated   (open records)
+//   NonEmpty  = text where length > 0
+
+Int8 in base
+Record in base
+String in base
+Uint8 in base
+difference in base
+intersect in base
+
+Small = intersect(Int8, Uint8)
+
+Named = { r suchthat r in Record and ("name", name) in r and name in String }
+Dated = { r suchthat r in Record and ("at", at) in r and at in String }
+Stamped = intersect(Named, Dated)
+
+NonEmpty = difference(String, {""})
+NotAdmin = { x suchthat x in String and x not in {"admin"} }
+
+// Small     member: 0, 127                 non-member: -1, 128
+// Stamped   member: {("at", "2026-10-23"), ("name", "abc")}    non-member: {("name", "abc")}
+// NonEmpty  member: "a"                    non-member: ""
+// NotAdmin  member: "root"                 non-member: "admin"
+// Target: Small → Checked(int8, ≥ 0) or native uint8 + check ≤ 127;
+//         Stamped → Record(at: String, name: String; rest);  NonEmpty/NotAdmin → Checked(string, ...).

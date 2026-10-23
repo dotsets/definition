@@ -1,0 +1,29 @@
+// 07-union-overlapping: the README `Human` case. Branches overlap, and the overlap is kept.
+// Rules: VM-REC-3, CS-UNI-1, CT-UNI-3, CT-UNI-4, CT-UNI-5
+//
+// Abstract source (open records):  Person = { name: text };  Aged = { age: number };  Human = Person | Aged
+
+Int32 in base
+Real in base
+Record in base
+String in base
+Uint32 in base
+union in base
+
+Person = { r suchthat r in Record and ("name", name) in r and name in String }
+Aged = { r suchthat r in Record and ("age", age) in r and age in Real }
+Human = union(Person, Aged)
+
+// Human
+//   member (Person only):  {("name", "abc")}                    JSON {"name":"abc"}
+//   member (Aged only):    {("age", 123)}                       JSON {"age":123}
+//   member (both):         {("age", 123), ("name", "abc")}      JSON {"name":"abc","age":123}
+//   member (Person only):  {("age", "x"), ("name", "abc")}      open Person allows any age; "x" is kept in rest
+//   non-member:            {}                                   JSON {}
+//   non-member:            {("age", "x")}                       neither name nor a Real age
+// Target: Record(age: Presence(Real), name: Presence(String); rest) + check (CT-UNI-4).
+//   After decoding the "both" member, IsPerson() and IsAged() are both true.
+
+// Same-kind scalar overlap (CT-UNI-5): one 64-bit integer + check.
+Wide = union(Int32, Uint32)
+//   member: -1, 4294967295, 0 (in both branches)        non-member: 4294967296, -2147483649

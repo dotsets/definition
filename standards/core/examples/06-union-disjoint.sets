@@ -1,0 +1,23 @@
+// 06-union-disjoint: unions whose branches are provably disjoint.
+// Rules: CS-UNI-1, CS-REC-4, CT-DISJ-1, CT-UNI-1, CT-UNI-2
+//
+// Abstract source:  Id = text | int;  Person = closed { name };  Aged = closed { age };  Either = Person | Aged
+
+Integer in base
+OnlyKeys in base
+Real in base
+Record in base
+String in base
+union in base
+
+Id = union(String, Integer)            // disjoint: different axioms (CT-DISJ-1 rule 5)
+
+Person = { r suchthat r in Record and ("name", name) in r and name in String and r in OnlyKeys({"name"}) }
+Aged = { r suchthat r in Record and ("age", age) in r and age in Real and r in OnlyKeys({"age"}) }
+Either = union(Person, Aged)           // disjoint: each requires a key the other excludes (CT-DISJ-1 rule 3)
+
+// Id      member: "x", 7             non-member: 7.5, true
+// Either  member: {("name", "abc")}  member: {("age", 1)}
+//         non-member: {("age", 1), ("name", "abc")}   closed records: this value is in neither branch.
+//         With open records it's in both; see 07-union-overlapping.
+// Target: Sum(Person, Aged); decoding tries Person then Aged and at most one accepts.
