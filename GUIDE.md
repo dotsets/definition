@@ -14,8 +14,9 @@
     * [difference of domains](#difference-of-domains)
     * [intersection of domains](#intersection-of-domains)
   * [phi](#phi)
-  * [`.sets` files are super domains](#sets-files-are-super-domains)
+  * [`.sets` files are superdomains](#sets-files-are-superdomains)
   * [Singletons](#singletons)
+  * [universal domain](#universal-domain)
   * [Domain Validation](#domain-validation)
   * [Tuples and Vectors](#tuples-and-vectors)
 
@@ -333,7 +334,7 @@ There are two parameters, `{x suchthat x in Number}`, since there is no `Number`
 
 Using the builder syntax, during parameterization, you can capture the argument passed. The variable[s], that is/are part of the builder notation, gets captured into the function body to use, like we used `x` later in the function body. Same goes for `D`.
 
-`U` is the same as top level domains. It is a semantic choice to declare an universal domain.
+`U` is the representation of a universal domain. It is effectively a domain that contains **every element possible* that is part of the discourse. More on this later.
 
 **Back to unions**
 
@@ -396,7 +397,7 @@ phi = {}
 Phi = phi // alias
 ```
 
-## `.sets` files are super domains
+## `.sets` files are superdomains
 
 Each `.set` file is a superdomain. The name of the file becomes the name of the domain.
 
@@ -506,6 +507,30 @@ This demonstrates that equality does not need to be a separate domain constructi
 > `Foo = { 1, 2, 3 }`, a function `f({x sub or = Foo}): x%2 = 0`, at callsite `f({1, 2, 3, 4})` would be invalid without evaluating
 
 > the expression, through cardinality of parameter domain and argument domain.
+
+## universal domain
+
+Universal domain is a domain that contains all the elements that are in the current discourse or context. 
+
+This is still not a special domain. We can already partially consider a union of all the super domains 
+as the universal domain. But that idea would be flawed. It is a good start, but anytime our code is being used,
+we need the union to grow.
+
+One way to think about a growing discourse, is every time a new element is introduced to the context,
+the only truth about that element we can be sure of, is that **it is itself**. That can be used to
+define our universal domain.
+
+Defining such a domain
+```.sets
+U = { x suchthat x in singleton(x) } // we have already defined singleton
+// or
+U = { x suchthat x in {x} }
+```
+
+
+Any time an element gets in context of `U`, it, by definition enters the discourse, thus is always a member of `U`.
+
+This, as well, can be part of a base superdomain.
 
 ## Domain Validation
 
