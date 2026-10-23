@@ -1,0 +1,30 @@
+// 11-generic: transformers with domain parameters, bounds, instantiation.
+// Rules: CS-GEN-1, CS-GEN-2, CT-GEN-1, CT-GEN-2
+//
+// Abstract source:
+//   Box<T>               = { value: T }
+//   Page<T extends Item> = { items: list<T>, next?: text }
+//   StrBox               = Box<text>
+
+OptionalField in base
+Record in base
+Seq in base
+String in base
+U in base
+
+Item = { r suchthat r in Record and ("id", id) in r and id in String }
+
+Box({T sub U}): { r suchthat r in Record and ("value", value) in r and value in T }
+Page({T sub Item}): {
+    r suchthat
+    r in Record and
+    ("items", items) in r and items in Seq(T) and
+    r in OptionalField({"next"}, String)
+}
+
+StrBox = Box(String)
+ItemPage = Page(Item)
+
+// StrBox    member: {("value", "a")}                              non-member: {("value", 1)}
+// ItemPage  member: {("items", ({("id", "1")}, ()))}              JSON {"items":[{"id":"1"}]}
+// Target: Box[T any], Page[T Item]; or monomorphized BoxString / PageItem when generics are unavailable.

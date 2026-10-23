@@ -1,0 +1,27 @@
+// 04-optional-nullable: missing fields, null, and both.
+// Rules: VM-MISS-*, CS-OPT-1, CS-OPT-2, CS-OPT-3, CT-OPT-*
+//
+// Abstract source:  Profile = { avatar: text | null, bio?: text, nick?: text | null }   (closed)
+
+Null in base
+OnlyKeys in base
+OptionalField in base
+Record in base
+String in base
+union in base
+
+Profile = {
+    r suchthat
+    r in Record and
+    ("avatar", avatar) in r and avatar in union(String, Null) and
+    r in OptionalField({"bio"}, String) and
+    r in OptionalField({"nick"}, union(String, Null)) and
+    r in OnlyKeys({"avatar", "bio", "nick"})
+}
+
+// member:      {("avatar", null)}                                       JSON {"avatar":null}
+// member:      {("avatar", "a.png"), ("bio", "hi"), ("nick", null)}     JSON {"avatar":"a.png","bio":"hi","nick":null}
+// member:      {("avatar", null), ("nick", "x")}                        JSON {"avatar":null,"nick":"x"}
+// non-member:  {}                                                       JSON {} : avatar is nullable, not optional
+// non-member:  {("avatar", null), ("bio", null)}                        JSON {"avatar":null,"bio":null} : bio is optional, not nullable
+// Round trip must keep nick's three states apart: missing, null, "x" (CT-OPT-3).
