@@ -56,7 +56,7 @@ union in base
 Address in geo
 ```
 
-**CS-CONV-2 (Invariant). No unknown domains.** Every domain referenced is declared, constructed, imported or `u` (GUIDE, "Domain Validation"). Adapters don't rely on implementation magic.
+**CS-CONV-2 (Invariant). No unknown domains.** Every domain referenced is declared, constructed, imported or `U` (GUIDE, "Domain Validation"). Adapters don't rely on implementation magic.
 
 **CS-CONV-3 (Default). Domain names.** A named source type becomes a domain of the same name. If the name contains a reserved character (`,`, `{`, `}`), the character is escaped as GUIDE describes (`\,`). If two source types in one module would produce the same domain name, the language standard defines the disambiguation.
 
@@ -69,7 +69,7 @@ Address in geo
 
 **CS-CONV-5 (Invariant). Binder names.** The record binder is `r`. Each field's value binder is the key's spelling when that's a valid symbol and doesn't collide with `r` or a domain in scope; otherwise it's `_` followed by the key spelling with reserved characters escaped. Binders in other builders are `x`, `y`, `z`, then `x1`, `x2`, …. Binders are scoped symbols, so this rule only exists to make outputs comparable.
 
-**CS-CONV-6 (Invariant). Rule shape.** Rules evaluate left to right with equal precedence (VM-RULE-1). An adapter emits a rule only when the left-to-right reading is the intended one. When it isn't (for example `(A and B) or (C and D)`), the adapter names the parts and combines them with `union`/`intersect`.
+**CS-CONV-6 (Invariant). Rule shape.** Rules follow boolean algebra (VM-RULE-1). Adapters write rules inline and add grouping parentheses (VM-RULE-1a) only where precedence alone would read differently: `(A or B) and C` needs them; `A and B or C and D` doesn't. Adapters don't add redundant parentheses, so output stays comparable.
 
 ## 3. Axioms
 
@@ -229,7 +229,7 @@ Human = union(Person, Aged)
 
 ### 5.9 Top and bottom
 
-**CS-TOP-1 (Invariant).** A type that admits every value in the view (`unknown`, `any`, `interface{}`, `object`) maps to `u` only if the view really admits every value. Otherwise it maps to the union of what the view admits. A JSON view admits `union(String, union(Real, union(Boolean, union(Null, union(Seq(u), Record)))))`; the language standard defines this as a named domain such as `JsonValue`.
+**CS-TOP-1 (Invariant).** A type that admits every value in the view (`unknown`, `any`, `interface{}`, `object`) maps to `U` only if the view really admits every value. Otherwise it maps to the union of what the view admits. A JSON view admits `union(String, union(Real, union(Boolean, union(Null, union(Seq(U), Record)))))`; the language standard defines this as a named domain such as `JsonValue`.
 
 **CS-TOP-2 (Invariant).** A type with no values (`never`, `!`, `Nothing`) maps to `phi`.
 
@@ -251,10 +251,10 @@ Human = union(Person, Aged)
 
 ### 5.12 Generics
 
-**CS-GEN-1 (Invariant).** A generic type maps to a transformer with one domain parameter per type parameter, in source order. An unbounded parameter is `{T sub u}`; a bound `T extends X` is `{T sub X}`:
+**CS-GEN-1 (Invariant).** A generic type maps to a transformer with one domain parameter per type parameter, in source order. An unbounded parameter is `{T sub U}`; a bound `T extends X` is `{T sub X}`:
 
 ```sets
-Box({T sub u}): { r suchthat r in Record and ("value", value) in r and value in T }
+Box({T sub U}): { r suchthat r in Record and ("value", value) in r and value in T }
 ```
 
 **CS-GEN-2 (Invariant).** An instantiation is a call: `Box<String>` → `Box(String)`. A named instantiation (`type StrBox = Box<String>`) is `StrBox = Box(String)`.
@@ -280,9 +280,11 @@ Tree = {
 
 ### 5.14 Refinements
 
-**CS-REF-1 (Invariant).** Value constraints that the language's type system or schema annotations enforce (ranges, lengths, patterns, non-empty) are part of the domain. Use `difference`, `not in`, rosters or predicates when the grammar can express the constraint. Otherwise declare a described subdomain with a prose extent (VM-SUB-2):
+**CS-REF-1 (Invariant).** Value constraints that the language's type system or schema annotations enforce (ranges, lengths, patterns, non-empty) are part of the domain. Use numeric operators (VM-AX-6), `difference`, `not in`, rosters or predicates when the grammar can express the constraint. Otherwise declare a described subdomain with a prose extent (VM-SUB-2):
 
 ```sets
+Percent = { x suchthat x in Real and x >= 0 and x <= 100 }
+EvenInt = { x suchthat x in Integer and x % 2 in {0} }
 NonEmptyString = difference(String, {""})
 ```
 
@@ -322,19 +324,20 @@ NonEmptyString = difference(String, {""})
 | Generics, bounds | mapped | CS-GEN-1, CS-GEN-2 |
 | Type-level computation | mapped by evaluation | CS-GEN-3 |
 | Recursive types | mapped | CS-RECUR-1 |
-| Range / length refinements | mapped through described subdomains | CS-REF-1 |
+| Range refinements | mapped through numeric operators | CS-REF-1 |
+| Length refinements | mapped through described subdomains | CS-REF-1 |
 | Functions, channels, promises | out of scope | CS-BEH-1 |
 | Modules, imports | mapped | CS-MOD-* |
 
-Totals over 23 constructs: 21 mapped (one of them partly a gap), 1 gap, 1 out of scope.
+Totals over 24 constructs: 22 mapped (one of them partly a gap), 1 gap, 1 out of scope.
 
 ## 7. Open Gaps
 
-**G-1. Ranges and patterns.** The grammar has no ordering or regular expressions. Interim: described subdomains with prose extents (VM-SUB-2). *Non-normative proposal:* a `base` predicate family such as `LessThan(x, y)` with prose semantics, or a `Matches` predicate over a pattern string.
+**G-1. Lengths and patterns.** Numeric ranges are covered by VM-AX-6, but there are no string or collection length operators and no regular expressions. Interim: described subdomains with prose extents (VM-SUB-2). *Non-normative proposal:* a `Length` transformer on strings and sequences, and a `Matches` predicate over a pattern string.
 
 **G-2. Cardinality and finiteness.** `SetOf` and `Map` rely on prose for finiteness and key uniqueness (VM-SET-1, VM-MAP-1). Interim: the prose is normative.
 
-**G-3. "Every other field".** An open record says nothing about the fields it doesn't mention. Constraining only those (an index signature whose value type excludes a fixed field's type) needs a way to name "fields whose key isn't in K". *Non-normative proposal:* a `base` transformer `OtherFields({K sub u}, {V sub u}): { r suchthat r in Record and r not in { s suchthat (k, v) in s and k not in K and v not in V } }`. It uses only existing grammar, so it can be adopted once reviewed.
+**G-3. "Every other field".** An open record says nothing about the fields it doesn't mention. Constraining only those (an index signature whose value type excludes a fixed field's type) needs a way to name "fields whose key isn't in K". *Non-normative proposal:* a `base` transformer `OtherFields({K sub U}, {V sub U}): { r suchthat r in Record and r not in { s suchthat (k, v) in s and k not in K and v not in V } }`. It uses only existing grammar, so it can be adopted once reviewed.
 
 **G-4. Pattern / template-literal strings.** Same as G-1. Interim: a described subdomain with a prose pattern, or widening to `String` with `CS-D-WIDENED`.
 

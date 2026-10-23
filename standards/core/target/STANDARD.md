@@ -32,7 +32,7 @@ Rule IDs are `CT-*`. **Invariant** rules can't be overridden; **Default** rules 
   * [5.9 Collections](#59-collections)
   * [5.10 Transformers and generics](#510-transformers-and-generics)
   * [5.11 Predicates and value transformers](#511-predicates-and-value-transformers)
-  * [5.12 `u` and `phi`](#512-u-and-phi)
+  * [5.12 `U` and `phi`](#512-u-and-phi)
   * [5.13 Recursion](#513-recursion)
 * [6. Domain-form coverage](#6-domain-form-coverage)
 * [7. Runtime support](#7-runtime-support)
@@ -145,7 +145,7 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 | `Null` | `{null}` | exact (unit / null type) | — |
 | `Record` | All records | `Record(; rest)`: a string-keyed `Dict` of raw values | — |
 
-**CT-AXB-2 (Default). Native numeric choice.** A described integer subdomain binds to the narrowest native type that contains it. If none matches exactly, the binding uses a wider native type with a range check. A union of numeric domains is bound as a single scalar under CT-UNI-5.
+**CT-AXB-2 (Default). Native numeric choice.** A ranged integer domain (VM-SUB-0), from `base` or written by a source adapter, binds to the narrowest native type that contains it. The adapter compares the bounds in the rule with the native widths; it doesn't match on the domain's name. If none matches exactly, the binding uses a wider native type with a range check. `Binary64Finite` and `Binary32Finite` bind to native binary64 and binary32 by recognizing their `m * 2 ^ e` rule and bounds; the check is only that the native value is finite. A union of numeric domains is bound as a single scalar under CT-UNI-5.
 
 **CT-AXB-3 (Invariant). Unbound axioms.** An axiom or described subdomain with no row in the language standard's table becomes `Opaque(name)`. That type keeps the raw wire value so it round-trips, and the adapter emits `CT-D-UNBOUND`. Guessing a native type from the axiom's name isn't allowed.
 
@@ -162,7 +162,7 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 | Rosters | `Enum` per kind; mixed kinds become a `Sum` of enums. | CT-ROS-* |
 | Transformers returning domains | Generics, or monomorphization per call site. | CT-GEN-* |
 | Predicates, value transformers | Functions, used inside checks. | CT-FN-* |
-| `u` / `phi` | `Top` / `Bottom`, or rejection. | CT-TOP-* |
+| `U` / `phi` | `Top` / `Bottom`, or rejection. | CT-TOP-* |
 | Imports | Module imports; `base` is bound, not emitted. | CT-DECL-3 |
 
 ## 5. Representation rules
@@ -202,6 +202,8 @@ Each rule states its exactness. Examples live in [`../examples/`](../examples/):
 **CT-BLD-3 (Invariant). Equality.** `x in singleton(v)` is equivalent to the roster `{v}` (CT-ROS-3).
 
 **CT-BLD-4 (Invariant). Predicate rules.** A rule that calls a predicate becomes `Checked`, with the predicate emitted per CT-FN-1.
+
+**CT-BLD-5 (Invariant). Numeric rules.** A rule with numeric operators (VM-AX-6) becomes `Checked(R(base), rule)`, where `base` is the domain the member is constrained to. The check uses exact arithmetic: if the native type can overflow or round while evaluating the rule, the generated check uses big-number or rational arithmetic instead. A rule that is only bounds (`x >= lo and x <= hi`) on `Integer` binds by CT-AXB-2 and is exact when a native type has exactly those bounds.
 
 ### 5.4 Tuples
 
@@ -301,7 +303,7 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 
 ### 5.10 Transformers and generics
 
-**CT-GEN-1 (Default).** A transformer that returns a domain and has only domain parameters `{T sub X}` becomes `Generic`. Each parameter becomes a type parameter bounded by `R(X)`, or is unbounded when `X` is `u`. If the target has no generics, or can't express the bound, each call site is monomorphized under CT-NAME-2, using the call's argument names (`Box(String)` → `BoxString`).
+**CT-GEN-1 (Default).** A transformer that returns a domain and has only domain parameters `{T sub X}` becomes `Generic`. Each parameter becomes a type parameter bounded by `R(X)`, or is unbounded when `X` is `U`. If the target has no generics, or can't express the bound, each call site is monomorphized under CT-NAME-2, using the call's argument names (`Box(String)` → `BoxString`).
 
 **CT-GEN-2 (Invariant). Call sites.** `N = F(A1 … An)` becomes an instantiation alias, or a monomorphized type named `N`.
 
@@ -315,9 +317,9 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 
 **CT-FN-2 (Default).** A transformer that returns a scalar or a tuple is code, not a type. It's emitted as a function only when a check uses it. Otherwise it's skipped, without a diagnostic.
 
-### 5.12 `u` and `phi`
+### 5.12 `U` and `phi`
 
-**CT-TOP-1 (Invariant).** `u` becomes `Top`. Its codec accepts any wire value and keeps it as raw data, so it round-trips exactly. A target with no top type reports `CT-D-UNSUPPORTED`.
+**CT-TOP-1 (Invariant).** `U` becomes `Top`. Its codec accepts any wire value and keeps it as raw data, so it round-trips exactly. A target with no top type reports `CT-D-UNSUPPORTED`.
 
 **CT-TOP-2 (Invariant).** `phi` becomes `Bottom`. If the target has no uninhabited type, it uses a type with no public constructor and a decoder that always fails (exact). A record field of domain `phi` makes the whole record `phi`; the adapter reports this as a warning, because it's usually a source mistake.
 
@@ -341,6 +343,7 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 | Roster of domain symbols | unsupported | CT-ROS-4 |
 | Scalar builder `x in D` | exact | CT-BLD-1 |
 | `not in`, `difference` | over + check | CT-BLD-2, CT-DIF-1 |
+| Numeric operator rules (ranges, modulo) | exact (native width) or over + check | CT-BLD-5 |
 | Tuple, nested tuple, empty tuple | exact | CT-TUP-* |
 | Record, open (with `rest`) or closed | exact | CT-REC-1 to CT-REC-3 |
 | Record with other rule clauses | over + check | CT-REC-4 |
@@ -354,11 +357,11 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 | `SetOf`, `Map` | exact or over + check | CT-COL-2, CT-COL-3 |
 | Transformer returning a domain (generics) | exact | CT-GEN-1 |
 | Predicate, value transformer | code, not type | CT-FN-* |
-| `u`, `phi` | exact | CT-TOP-* |
+| `U`, `phi` | exact | CT-TOP-* |
 | Recursive domain | exact | CT-RECUR-1 |
 | Cardinality constraints | gap | §9 |
 
-Totals over 26 forms: 14 exact, 6 over + check, 3 exact or over + check depending on the binding, 1 unsupported, 1 gap, and 1 that is code rather than a type (predicates and value transformers).
+Totals over 27 forms: 14 exact, 6 over + check, 4 exact or over + check depending on the binding, 1 unsupported, 1 gap, and 1 that is code rather than a type (predicates and value transformers).
 
 ## 7. Runtime support
 

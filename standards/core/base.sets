@@ -12,8 +12,8 @@
 // Universal and empty domains (GUIDE "universal domain", "phi")
 // ---------------------------------------------------------------------
 
-u = { x suchthat x in {x} }
-U = u
+U = { x suchthat x in {x} }
+u = U
 phi = {}
 Phi = phi
 
@@ -21,11 +21,11 @@ Phi = phi
 // Domain operations (GUIDE "Domain operations built on axioms")
 // ---------------------------------------------------------------------
 
-singleton({x suchthat x in u}): {x}
-union({A sub u}, {B sub u}): { x suchthat x in A or x in B }
-intersect({A sub u}, {B sub u}): { x suchthat x in A and x in B }
-difference({A sub u}, {B sub u}): { x suchthat x in A and x not in B }
-product2({A sub u}, {B sub u}): { (x, y) suchthat x in A and y in B }
+singleton({x suchthat x in U}): {x}
+union({A sub U}, {B sub U}): { x suchthat x in A or x in B }
+intersect({A sub U}, {B sub U}): { x suchthat x in A and x in B }
+difference({A sub U}, {B sub U}): { x suchthat x in A and x not in B }
+product2({A sub U}, {B sub U}): { (x, y) suchthat x in A and y in B }
 
 // ---------------------------------------------------------------------
 // Top-level axioms. These are pairwise disjoint (VM-AX-1).
@@ -46,65 +46,83 @@ Null = {null}
 IEEESpecial = {NaN, PositiveInfinity, NegativeInfinity, NegativeZero}
 
 // ---------------------------------------------------------------------
-// Described subdomains. `X sub Y` declares X with members drawn from Y
-// (GUIDE "Difference between `sub` and `in` in this context");
-// VALUE-MODEL.md §4 fixes exactly which members of Y belong to X.
+// Ranged domains (VM-AX-6, VM-SUB-0)
 // ---------------------------------------------------------------------
 
-Char sub String
+Natural = { x suchthat x in Integer and x >= 0 }
 
-Natural sub Integer
-Int64 sub Integer
-Int32 sub Int64
-Int16 sub Int32
-Int8 sub Int16
-Uint64 sub Natural
-Uint32 sub Uint64
-Uint16 sub Uint32
-Uint8 sub Uint16
+Int8 = { x suchthat x in Integer and x >= -128 and x <= 127 }
+Int16 = { x suchthat x in Integer and x >= -32768 and x <= 32767 }
+Int32 = { x suchthat x in Integer and x >= -2147483648 and x <= 2147483647 }
+Int64 = { x suchthat x in Integer and x >= -9223372036854775808 and x <= 9223372036854775807 }
 
-Binary64Finite sub Real
-Binary32Finite sub Binary64Finite
+Uint8 = { x suchthat x in Integer and x >= 0 and x <= 255 }
+Uint16 = { x suchthat x in Integer and x >= 0 and x <= 65535 }
+Uint32 = { x suchthat x in Integer and x >= 0 and x <= 4294967295 }
+Uint64 = { x suchthat x in Integer and x >= 0 and x <= 18446744073709551615 }
+
+// Finite IEEE-754 values: m * 2 ^ e within the format's bounds.
+// m and e are rule-local binders (VM-RULE-2).
+Binary64Finite = {
+    x suchthat
+    m in Integer and m > -9007199254740992 and m < 9007199254740992 and
+    e in Integer and e >= -1074 and e <= 971 and
+    x in singleton(m * 2 ^ e)
+}
+Binary32Finite = {
+    x suchthat
+    m in Integer and m > -16777216 and m < 16777216 and
+    e in Integer and e >= -149 and e <= 104 and
+    x in singleton(m * 2 ^ e)
+}
 
 Float64 = union(Binary64Finite, IEEESpecial)
 Float32 = union(Binary32Finite, IEEESpecial)
 
 // ---------------------------------------------------------------------
-// Collections (VALUE-MODEL.md §5)
+// Described subdomains. `X sub Y` declares X with members drawn from Y
+// (GUIDE "Difference between `sub` and `in` in this context");
+// VALUE-MODEL.md §5 fixes exactly which members of Y belong to X.
+// ---------------------------------------------------------------------
+
+Char sub String
+
+// ---------------------------------------------------------------------
+// Collections (VALUE-MODEL.md §6.5)
 // ---------------------------------------------------------------------
 
 // Finite sequences as nested pairs ending in the empty tuple:
 // [] is (), [a, b] is (a, (b, ())).
 EmptySeq = {()}
-Seq({T sub u}): union(EmptySeq, { (h, t) suchthat h in T and t in Seq(T) })
+Seq({T sub U}): union(EmptySeq, { (h, t) suchthat h in T and t in Seq(T) })
 
 // Finite subdomains of T.
-SetOf({T sub u}): { s suchthat s sub T }
+SetOf({T sub U}): { s suchthat s sub T }
 
 // Finite sets of (key, value) pairs with unique keys (VM-MAP-1).
-Map({K sub u}, {V sub u}): { m suchthat m sub product2(K, V) }
+Map({K sub U}, {V sub U}): { m suchthat m sub product2(K, V) }
 
 // ---------------------------------------------------------------------
-// Records (VALUE-MODEL.md §5.1). A record is a set of (key, value)
+// Records (VALUE-MODEL.md §6.1). A record is a set of (key, value)
 // tuples with string keys. Record domains are open unless they say
 // otherwise.
 // ---------------------------------------------------------------------
 
-Record = Map(String, u)
+Record = Map(String, U)
 
 // Records whose fields with a key in K, if present, hold a value in V.
-OptionalField({K sub u}, {V sub u}): {
+OptionalField({K sub U}, {V sub U}): {
     r suchthat
     r in Record and
     r not in { s suchthat (k, v) in s and k in K and v not in V }
 }
 
 // Records with no keys outside K (closed records).
-OnlyKeys({K sub u}): { r suchthat r in Record and r sub product2(K, u) }
+OnlyKeys({K sub U}): { r suchthat r in Record and r sub product2(K, U) }
 
 // ---------------------------------------------------------------------
-// Tagged variants (VALUE-MODEL.md §5.3). T is normally a singleton atom
+// Tagged variants (VALUE-MODEL.md §6.3). T is normally a singleton atom
 // domain such as {Circle}.
 // ---------------------------------------------------------------------
 
-Variant({T sub u}, {P sub u}): product2(T, P)
+Variant({T sub U}, {P sub U}): product2(T, P)

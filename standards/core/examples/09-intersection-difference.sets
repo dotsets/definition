@@ -1,12 +1,15 @@
-// 09-intersection-difference: intersect, record intersection, difference, not in.
-// Rules: CS-INT-1, CS-REF-1, CT-INT-1, CT-DIF-1, CT-BLD-2
+// 09-intersection-difference: intersect, record intersection, difference, not in, numeric rules.
+// Rules: CS-INT-1, CS-REF-1, VM-AX-6, CT-INT-1, CT-DIF-1, CT-BLD-2, CT-BLD-5
 //
 // Abstract source:
 //   Small     = int8 & uint8
 //   Named     = { name: text };  Dated = { at: text };  Stamped = Named & Dated   (open records)
 //   NonEmpty  = text where length > 0
+//   Percent   = real in [0, 100];  EvenInt = int where x % 2 == 0
 
 Int8 in base
+Integer in base
+Real in base
 Record in base
 String in base
 Uint8 in base
@@ -22,9 +25,14 @@ Stamped = intersect(Named, Dated)
 NonEmpty = difference(String, {""})
 NotAdmin = { x suchthat x in String and x not in {"admin"} }
 
+Percent = { x suchthat x in Real and x >= 0 and x <= 100 }
+EvenInt = { x suchthat x in Integer and x % 2 in {0} }
+
 // Small     member: 0, 127                 non-member: -1, 128
 // Stamped   member: {("at", "2026-10-23"), ("name", "abc")}    non-member: {("name", "abc")}
 // NonEmpty  member: "a"                    non-member: ""
 // NotAdmin  member: "root"                 non-member: "admin"
+// Percent   member: 0, 99.5, 100           non-member: -0.5, 100.5, "50"
+// EvenInt   member: 0, -4, 10              non-member: 3, 2.5 (% has no result for non-integers)
 // Target: Small → Checked(int8, ≥ 0) or native uint8 + check ≤ 127;
 //         Stamped → Record(at: String, name: String; rest);  NonEmpty/NotAdmin → Checked(string, ...).

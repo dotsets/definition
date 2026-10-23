@@ -15,7 +15,7 @@ Rules are tagged **Invariant** (a language standard can't override them) or **De
 * [2. Lexical conventions for roster symbols](#2-lexical-conventions-for-roster-symbols)
 * [3. Rules and binders](#3-rules-and-binders)
 * [4. Axioms](#4-axioms)
-* [5. Described subdomains](#5-described-subdomains)
+* [5. Ranged and described subdomains](#5-ranged-and-described-subdomains)
 * [6. Structural encodings](#6-structural-encodings)
   * [6.1 Records](#61-records)
   * [6.2 Missing fields and null](#62-missing-fields-and-null)
@@ -56,11 +56,22 @@ Records, sets and maps aren't separate kinds. They are finite domains whose memb
 
 **VM-LEX-4 (Invariant). The `@` escape.** When an atom's spelling would otherwise be read as something else (a domain name in scope, a numeric symbol, or a symbol starting with `"` or `@`), it's written with a leading `@`. `{@Number}` is the atom `Number`; `{Number}` is the domain `Number`. Atoms are written bare whenever that's unambiguous.
 
-**VM-LEX-5 (Invariant). Universal domain spelling.** Standards use `u`. `U` is an alias in `base` and is never emitted.
+**VM-LEX-5 (Invariant). Universal domain spelling.** Standards use `U`. `u` is an alias in `base` for convenience and is never emitted.
 
 ## 3. Rules and binders
 
-**VM-RULE-1 (Invariant). `and` and `or` evaluate left to right with equal precedence.** `A and B or C` is `(A and B) or C`; `A or B and C` is `(A or B) and C`. There is no other grouping, because parentheses are values.
+**VM-RULE-1 (Invariant). Rules follow boolean algebra.** Rules combine with the usual precedence from math, highest first:
+
+| Level | Operators |
+| ----- | --------- |
+| 1 | arithmetic (VM-AX-6): `^`, then `*`, `/`, `%`, then `+`, `-` |
+| 2 | comparisons and membership: `<`, `<=`, `>`, `>=`, `in`, `not in`, `sub` |
+| 3 | `and` |
+| 4 | `or` |
+
+Operators at the same level group left to right, except `^`, which groups right to left as in math (`2 ^ 3 ^ 2` is `2 ^ 9`). `A or B and C` is `A or (B and C)`; `A and B or C and D` is `(A and B) or (C and D)`.
+
+**VM-RULE-1a (Invariant). Grouping parentheses.** Inside a rule, parentheses that enclose a rule expression (anything containing `in`, `not in`, `sub`, `and`, `or` or a comparison) or an arithmetic expression group it, as in math: `A and (B or C)`, `(x + 1) % 2`. Parentheses that enclose only values and binders are tuples: `("name", name) in r`. Grouping parentheses never create a value, so this doesn't conflict with "parentheses are values" (GUIDE, "Tuples and Vectors"), which is about values.
 
 **VM-RULE-2 (Invariant). Rule-local binders are existential.** A symbol that first appears inside a rule, and isn't the member binder, a function parameter or a domain in scope, is bound existentially over the whole rule. In
 
@@ -68,7 +79,15 @@ Records, sets and maps aren't separate kinds. They are finite domains whose memb
 Person = { r suchthat r in Record and ("name", name) in r and name in String }
 ```
 
-`name` ranges over the values for which the rule holds: `r` is a member if *some* `name` makes the rule true. Because record keys are unique (VM-MAP-1), there's at most one candidate.
+`name` ranges over the values for which the rule holds: `r` is a member if *some* `name` makes the rule true. Because record keys are unique (VM-MAP-1), there's at most one candidate, so "some `name`" means "the value of `r`'s `name` field".
+
+| `r` | Why | Member? |
+| --- | --- | ------- |
+| `{("age", 1), ("name", "abc")}` | `name = "abc"` puts `("name", name)` in `r`, and `"abc"` is a String. | yes |
+| `{("name", 5)}` | The only candidate is `name = 5`, and `5` isn't a String. | no |
+| `{("age", 1)}` | No value of `name` puts `("name", name)` in `r`. This is how a required field is expressed. | no |
+
+The binder is existential, not universal: "for all `name`, `("name", name) in r`" would need every value to be paired with `"name"`, which no finite record satisfies.
 
 **VM-RULE-3 (Invariant). Literals in patterns.** A pattern such as `("name", name)` may mix literal values (`"name"`) and binders (`name`). A literal matches only an equal value (VM-EQ-1).
 
@@ -92,32 +111,61 @@ Person = { r suchthat r in Record and ("name", name) in r and name in String }
 
 **VM-AX-4 (Invariant). Booleans and null are atoms.** `Boolean = {true, false}`, `Null = {null}`. A language whose booleans are integers maps them by its own source standard; the core values stay atoms.
 
+**VM-AX-6 (Invariant). Numeric operators are mathematical.** Because numbers are mathematical values (VM-AX-2), operators on them have their mathematical meaning:
+- `+`, `-`, `*`, `/` give exact results, with no overflow, rounding or wraparound. `1 / 3` is the exact rational one third. Division by zero has no result.
+- `a ^ n` is exponentiation with an integer exponent `n`. For `n >= 0` it's defined for every number `a` (`0 ^ 0` is `1`); for `n < 0` it's `1 / a ^ (0 - n)` and needs `a` to be non-zero. A non-integer exponent has no result, so results stay exact rationals: `2 ^ -2` is `0.25`.
+- `%` is defined on integers. The result has the sign of the divisor (mathematical modulo): `-7 % 3` is `2`. A non-integer operand or a zero divisor gives no result.
+- `<`, `<=`, `>`, `>=` are the ordering of the reals.
+- An operator applied to a value that isn't a number (string, atom, tuple, domain) has no result. Nothing is coerced: `"1" + 1` doesn't exist.
+- A comparison or membership test whose operand has no result is false, so the rule doesn't hold for that value.
+
+Equality stays `x in singleton(y)` (GUIDE, "Singletons"); `=` and `!=` aren't operators.
+
 **VM-AX-5 (Default). New axioms.** A language standard adds a top-level axiom only for values that no `base` domain contains (for example, opaque handles in a runtime view). Values that exist in `base` (dates, UUIDs, decimals) are described subdomains of `base` domains instead, because a new axiom would be disjoint from them.
 
-## 5. Described subdomains
+## 5. Ranged and described subdomains
 
-A top-level `X sub Y` declares a domain `X` whose members are drawn from `Y`, at most all of `Y` (GUIDE, "Difference between `sub` and `in` in this context"). The grammar can't yet state ranges or patterns, so the prose here fixes each domain's exact extent. Target adapters bind these domains by this prose. A described subdomain with no prose extent is read as GUIDE reads it: the same as `Y`.
+**VM-SUB-0 (Invariant). Ranged domains are builders.** A domain bounded by numeric comparisons is written as a builder with VM-AX-6 operators. `base.sets` defines `Natural`, `Int8`…`Int64` and `Uint8`…`Uint64` this way, for example:
+
+```sets
+Int32 = { x suchthat x in Integer and x >= -2147483648 and x <= 2147483647 }
+```
+
+Their overlaps follow from the rules: `Uint32` is inside `Int64` because every member satisfies `Int64`'s rule.
+
+The binary floating-point domains are builders too. A finite IEEE-754 value is `m * 2 ^ e` for an integer significand `m` and exponent `e` within the format's bounds. `m` and `e` are rule-local binders, so they're existential (VM-RULE-2):
+
+```sets
+Binary64Finite = {
+    x suchthat
+    m in Integer and m > -9007199254740992 and m < 9007199254740992 and
+    e in Integer and e >= -1074 and e <= 971 and
+    x in singleton(m * 2 ^ e)
+}
+```
+
+| Domain | `abs(m) <` | `e` range |
+| ------ | ---------- | --------- |
+| `Binary64Finite` | `2 ^ 53` | `-1074 … 971` |
+| `Binary32Finite` | `2 ^ 24` | `-149 … 104` |
+
+`0` is a member (`m = 0`); `−0` isn't, because it's the atom `NegativeZero` (VM-AX-3). `Float64` and `Float32` add `IEEESpecial` with `union`. `Binary32Finite` is inside `Binary64Finite`, and every `Int32` is in `Binary64Finite`, both by the rules.
+
+A top-level `X sub Y` declares a domain `X` whose members are drawn from `Y`, at most all of `Y` (GUIDE, "Difference between `sub` and `in` in this context"). Domains that the grammar still can't state are declared that way, and the prose here fixes each one's exact extent. Target adapters bind these domains by this prose. A described subdomain with no prose extent is read as GUIDE reads it: the same as `Y`.
 
 | Domain | Exact members |
 | ------ | ------------- |
-| `Char` | Strings of exactly one Unicode scalar value. |
-| `Natural` | Integers `n ≥ 0`. |
-| `Int8`, `Int16`, `Int32`, `Int64` | Integers in `[−2^(N−1), 2^(N−1) − 1]`. |
-| `Uint8`, `Uint16`, `Uint32`, `Uint64` | Integers in `[0, 2^N − 1]`. |
-| `Binary64Finite` | Finite reals exactly representable as IEEE-754 binary64. `−0` isn't a member; it's the atom `NegativeZero`. |
-| `Binary32Finite` | Finite reals exactly representable as IEEE-754 binary32. |
-| `Float64` | `union(Binary64Finite, IEEESpecial)`. |
-| `Float32` | `union(Binary32Finite, IEEESpecial)`. |
+| `Char` | Strings of exactly one Unicode scalar value. (Needs a string-length operator.) |
 
-**VM-SUB-1 (Invariant).** Described subdomains overlap the way their prose says, regardless of the single `sub` parent written in `base.sets`. For example, `Uint32` is also a subdomain of `Int64`, and `Binary64Finite` contains `Int32`.
+**VM-SUB-1 (Invariant).** Described subdomains overlap the way their prose says, regardless of the single `sub` parent written in `base.sets`.
 
-**VM-SUB-2 (Default).** A language standard declares further described subdomains in its own superdomain using the same form (`Decimal128 sub Real`, `Uuid sub String`, `Rfc3339Timestamp sub String`). Each one needs a prose extent precise enough to write a membership check from.
+**VM-SUB-2 (Default).** A language standard writes further ranged domains as builders (VM-SUB-0), and declares the remaining described subdomains in its own superdomain using the `sub` form (`Decimal128 sub Real`, `Uuid sub String`, `Rfc3339Timestamp sub String`). Each one needs a prose extent precise enough to write a membership check from.
 
 ## 6. Structural encodings
 
 ### 6.1 Records
 
-**VM-REC-1 (Invariant). A record value is a set of tuples.** Each member is a field `(key, value)`; keys are strings and unique. `Record = Map(String, u)` in `base` is the domain of all records.
+**VM-REC-1 (Invariant). A record value is a set of tuples.** Each member is a field `(key, value)`; keys are strings and unique. `Record = Map(String, U)` in `base` is the domain of all records.
 
 ```text
 { name: "abc", age: 123 }   is the value   {("name", "abc"), ("age", 123)}
@@ -225,13 +273,12 @@ Ambiguities and contradictions in `README.md` (`b52f182`) and `GUIDE.md` (`f5a56
 
 | # | Issue | Core assumption |
 | - | ----- | --------------- |
-| SI-1 | The universal domain is spelled both `u` and `U`. | `u`; `U` stays as an alias in `base` and is never emitted (VM-LEX-5). |
 | SI-18 | GUIDE's `base.sets` example lists only `u`, `phi` and the operations. `base` now also holds the axioms, described subdomains and structural transformers. | [`base.sets`](base.sets) is the full `base`. GUIDE's example could point to it. |
 | SI-6 | GUIDE says function parameters must be domains, but `IsOne(x)` and `ToUser(x, y)` take bare parameters. | Core only uses `{X sub D}` and `{x suchthat …}` parameters. |
-| SI-7 | `%`, `=`, `sub or =`, `!=` (GUIDE) and `subsetof` (README `Human`) appear but aren't defined. | Not used. |
+| SI-7 | `=`, `sub or =`, `!=` (GUIDE) and `subsetof` (README `Human`) appear but aren't defined. | Not used. `%` is now defined by VM-AX-6. |
 | SI-8 | `base` shows a variadic `union({A sub u}, {B sub u}, ...)`; variadic parameters aren't defined. | Binary `union`/`intersect`, nested right-associatively (CS-CONV-4). |
 | SI-12 | "`{x} in U` *can* be written as `{x} sub U`" mixes membership and subset. | In a rule, `s sub T` means every member of `s` is in `T` (VM-RULE-4; used by `SetOf`, `Map`, `OnlyKeys`). |
-| SI-14 | There's no grammar for cardinality, finiteness, ordering, ranges or patterns. | Prose rules (VM-SET-1, VM-MAP-1, §5) and the gaps in each standard. |
+| SI-14 | There's no grammar for cardinality, finiteness, string length or patterns. | Prose rules (VM-SET-1, VM-MAP-1, §5) and the gaps in each standard. Ranges and floating-point domains are covered by VM-AX-6. |
 | SI-15 | `//` comments are used throughout but aren't part of the grammar. | Allowed; they carry no meaning. |
 | SI-16 | README says TypeScript's `Person \| Aged` is an "intersection". As a domain it's a union of open records whose members can satisfy both branches. | Terminology only. `union(Person, Aged)` with open records (VM-REC-3). |
 | SI-17 | GUIDE doesn't say how symbols that appear only in a rule (`n` in `("name", n) in r and n in String`) are bound. | Existentially over the whole rule (VM-RULE-2). |
@@ -240,11 +287,20 @@ Ambiguities and contradictions in `README.md` (`b52f182`) and `GUIDE.md` (`f5a56
 
 | # | Issue | Resolution |
 | - | ----- | ---------- |
+| SI-1 | The universal domain was spelled both `u` and `U`. | `U` is canonical; `u` is an alias in `base` (VM-LEX-5). |
 | SI-2 | Record members were `{name, age}` in GUIDE and `(name)` in README. | Records are sets of `(key, value)` tuples: `{r suchthat ("name", n) in r and n in String}` (VM-REC-*). |
 | SI-3 | There was no shared axioms superdomain. | `core` is merged into `base`. |
 | SI-4 | Quoting was only a convention. | VM-LEX-1 to VM-LEX-4 are accepted for now. |
-| SI-5 | `and`/`or` had no precedence. | Left to right, equal precedence (VM-RULE-1). |
+| SI-5 | `and`/`or` had no precedence. | Boolean algebra with `()` grouping (VM-RULE-1, VM-RULE-1a). Pending in GUIDE; see the notes below. |
 | SI-9 | The empty tuple wasn't defined. | `()` is the 0-tuple; transpilers may use it as a unique value (VM-TUP-2). |
 | SI-10 | Recursion wasn't defined. | Allowed (VM-RECUR-1). |
 | SI-11 | Top-level `X sub Y` seemed undefined. | Defined in GUIDE, "Difference between `sub` and `in` in this context" (§5). |
 | SI-13 | Literals inside patterns weren't defined. | Allowed (VM-RULE-3). |
+
+### Notes for the spec author
+
+Decisions made in review that belong in `GUIDE.md`. The standards already rely on them.
+
+1. **Rule precedence and grouping** (VM-RULE-1, VM-RULE-1a). Rules follow boolean algebra: arithmetic, then comparisons and membership, then `and`, then `or`, each level grouping left to right. Parentheses around a rule or arithmetic expression group it; parentheses around values and binders are tuples. GUIDE's "Tuples and Vectors" section should say that grouping parentheses aren't values.
+2. **Numeric operators** (VM-AX-6). `^ * / % + -` and `< <= > >=` on numbers, with exact mathematical meaning and no coercion; `^` takes integer exponents and groups right to left. This makes ranged and floating-point domains expressible (`Int32`, `Binary64Finite` as builders), which GUIDE's number discussion could show.
+3. **Rule-local binders** (VM-RULE-2, SI-17). A symbol that first appears inside a rule is existential over the rule.

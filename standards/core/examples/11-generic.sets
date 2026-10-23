@@ -10,11 +10,11 @@ OptionalField in base
 Record in base
 Seq in base
 String in base
-u in base
+U in base
 
 Item = { r suchthat r in Record and ("id", id) in r and id in String }
 
-Box({T sub u}): { r suchthat r in Record and ("value", value) in r and value in T }
+Box({T sub U}): { r suchthat r in Record and ("value", value) in r and value in T }
 Page({T sub Item}): {
     r suchthat
     r in Record and
