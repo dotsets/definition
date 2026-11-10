@@ -1,0 +1,41 @@
+// 03-record: records, nested records, field keys as values, closed records.
+// Rules: VM-REC-*, CS-REC-1 to CS-REC-4, CS-CONV-4, CS-CONV-5, CT-REC-1 to CT-REC-3
+//
+// Abstract source:
+//   Address = { city: text }                                (open)
+//   User    = { name: text, age: int64, home: Address }     (open; wire key of `home` renamed to "home_address")
+//   Point   = { x: int64, y: int64 }                        (closed: the view rejects unknown keys)
+
+Int64 in base
+OnlyKeys in base
+Record in base
+String in base
+
+Address = { r suchthat r in Record and ("city", city) in r and city in String }
+
+User = {
+    r suchthat
+    r in Record and
+    ("age", age) in r and age in Int64 and
+    ("home_address", home_address) in r and home_address in Address and
+    ("name", name) in r and name in String
+}
+
+Point = {
+    r suchthat
+    r in Record and
+    ("x", x) in r and x in Int64 and
+    ("y", y) in r and y in Int64 and
+    r in OnlyKeys({"x", "y"})
+}
+
+// User
+//   member:      {("age", 30), ("home_address", {("city", "Pune")}), ("name", "abc")}
+//                JSON {"age":30,"home_address":{"city":"Pune"},"name":"abc"}
+//   member:      ... plus ("nick", "a")                              open: extra fields are allowed and must round-trip
+//   non-member:  {("age", 30), ("name", "abc")}                       missing required field
+//   non-member:  {("age", 30), ("city", "Pune"), ("name", "abc")}     flattened: Address stays nested
+//   non-member:  ("abc", 30, ("Pune"))                                 positional tuple, not a record
+// Point
+//   member:      {("x", 1), ("y", 2)}
+//   non-member:  {("x", 1), ("y", 2), ("z", 3)}                        closed: extra key

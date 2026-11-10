@@ -1,0 +1,21 @@
+// 10-collections: lists, sets, maps, index signatures.
+// Rules: VM-SEQ-1, VM-SET-1, VM-MAP-1, CS-COL-1, CT-COL-*
+//
+// Abstract source:  Tags = list<text>;  Unique = set<int>;  Scores = map<text, real>;  Grid = map<(int, int), text>
+
+Integer in base
+Map in base
+Real in base
+Seq in base
+SetOf in base
+String in base
+
+Tags = Seq(String)
+Unique = SetOf(Integer)
+Scores = Map(String, Real)
+Grid = Map({ (x, y) suchthat x in Integer and y in Integer }, String)
+
+// Tags    member: (), ("a", ("b", ()))          JSON [], ["a","b"]       non-member: ("a", "b") (a 2-tuple, not a sequence)
+// Unique  member: {}, {1, 2}                    JSON [], [1,2]           non-member: [1,1] on the wire (duplicate)
+// Scores  member: {("a", 1.5)}                  JSON {"a":1.5}           non-member: {("a", 1), ("a", 2)} (duplicate key)
+// Grid    member: {((0, 0), "x")}               JSON [[[0,0],"x"]]       (non-string keys: array of pairs, VM-JSON-1)

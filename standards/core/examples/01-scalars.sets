@@ -1,0 +1,27 @@
+// 01-scalars: core scalar bindings.
+// Rules: CS-SCA-1, CS-SCA-2, VM-AX-*, VM-SUB-1, CT-DECL-1, CT-DECL-4, CT-AXB-*
+//
+// Abstract source:  name: text;  count: 32-bit signed int;  ratio: binary64 (JSON view);  ok: boolean
+
+Binary64Finite in base
+Boolean in base
+Int32 in base
+String in base
+
+Name = String
+Count = Int32
+Ratio = Binary64Finite
+Ok = Boolean
+
+// Count
+//   member:      0, -2147483648, 2147483647
+//   non-member:  2147483648 (out of range), 1.5 (Fractional), "1" (String)
+// Ratio
+//   member:      1 (same value as 1.0, VM-AX-2), 0.5, -7
+//   non-member:  NaN, PositiveInfinity (atoms, not in Binary64Finite), 0.1 (no exact binary64 value)
+// Name
+//   member:      "", "abc", "日本"
+//   non-member:  abc (atom), ("abc") (1-tuple)
+// Ok
+//   member:      true, false
+//   non-member:  "true", 1

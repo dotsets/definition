@@ -1,0 +1,24 @@
+// 02-rosters: literal types, enumerations, mixed rosters, escapes.
+// Rules: CS-LIT-1, CS-LIT-2, CS-ENUM-1, VM-LEX-*, CT-ROS-1, CT-ROS-2, CT-ROS-3
+//
+// Abstract source:
+//   Status    = "Succeeded" | "Failed" | "Processing"     (string literals)
+//   Phase     = enum { Pending, Done }                      (value-less variants)
+//   Answer    = 42                                          (number literal)
+//   Mixed     = "auto" | 0                                  (literal union, two kinds)
+//   Keyword   = "Number" | Number-the-atom                  (collides with a domain name)
+
+Number = {1}  // a local domain named Number, to show the collision
+
+Status = {"Succeeded", "Failed", "Processing"}
+Phase = {Pending, Done}
+Answer = {42}
+Mixed = {"auto", 0}
+Keyword = {"Number", @Number}
+
+// Status   member: "Failed"           non-member: Failed (atom), "failed"
+// Phase    member: Pending            non-member: "Pending"            JSON of Pending: "Pending"
+// Answer   member: 42                 non-member: 42.5, "42"
+// Mixed    member: "auto", 0          non-member: "0", auto
+// Keyword  member: "Number", @Number  non-member: 1 (member of the domain Number, not of Keyword)
+//   Keyword's JSON projection is ambiguous: both members project to "Number" (VM-JSON-2, CT-D-WIRE-AMBIGUOUS).

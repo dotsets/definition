@@ -1,0 +1,19 @@
+// 12-recursion: self-reference.
+// Rules: VM-RECUR-1, CS-RECUR-1, CT-RECUR-1
+//
+// Abstract source:  Tree = { label: text, children: list<Tree> }
+
+Record in base
+Seq in base
+String in base
+
+Tree = {
+    r suchthat
+    r in Record and
+    ("children", children) in r and children in Seq(Tree) and
+    ("label", label) in r and label in String
+}
+
+// member:      {("children", ()), ("label", "leaf")}                                    JSON {"children":[],"label":"leaf"}
+// member:      {("children", ({("children", ()), ("label", "b")}, ())), ("label", "a")}
+// non-member:  {("label", "a")} (children is required); any infinite value

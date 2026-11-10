@@ -1,0 +1,18 @@
+// 05-tuple: positional tuples, 1-tuples, nested tuples, fixed arrays.
+// Rules: VM-TUP-1, CS-TUP-1, CT-TUP-*
+//
+// Abstract source:  Pair = [text, int];  Single = [text];  Nested = [[text], [int]];  RGB = uint8[3]
+
+Integer in base
+String in base
+Uint8 in base
+
+Pair = { (x, y) suchthat x in String and y in Integer }
+Single = { (x) suchthat x in String }
+Nested = { (x, y) suchthat x in Single and y in { (z) suchthat z in Integer } }
+RGB = { (x, y, z) suchthat x in Uint8 and y in Uint8 and z in Uint8 }
+
+// Pair    member: ("a", 1)            non-member: ("a"), ("a", 1, 2), (1, "a")        JSON ["a",1]
+// Single  member: ("a")               non-member: "a"                                  JSON ["a"]
+// Nested  member: (("a"), (1))        non-member: ("a", 1)  (no flattening)            JSON [["a"],[1]]
+// RGB     member: (0, 128, 255)       non-member: (0, 128, 256), (0, 128)
