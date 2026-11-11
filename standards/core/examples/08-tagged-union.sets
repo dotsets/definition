@@ -1,18 +1,17 @@
-// 08-tagged-union: tags in the value, two placements.
-// Rules: VM-VAR-1, CS-TAG-1, CT-DISJ-1 (rules 4 and 6), CT-UNI-1
+// 08-tagged-union: a tag inside the value.
+// Rules: CS-TAG-1, CT-DISJ-1 (rule 4), CT-UNI-1
 //
 // Abstract source:
-//   Shape = Circle(real) | Square(real) | Origin                       (externally tagged / core view)
 //   Event = { kind: "click", x: int } | { kind: "key", code: text }     (tag inside the record)
+//
+// Core has no variant encoding. Other tag placements (externally or
+// adjacently tagged, bare tags) are written with records, tuples and atoms
+// as each language standard defines (CS-TAG-1, VM-PRES-2).
 
 Integer in base
-Real in base
 Record in base
 String in base
-Variant in base
 union in base
-
-Shape = union(Variant({Circle}, Real), union(Variant({Square}, Real), {Origin}))
 
 Click = {
     r suchthat
@@ -28,7 +27,5 @@ Key = {
 }
 Event = union(Click, Key)              // disjoint: both require "kind" with disjoint values (CT-DISJ-1 rule 4)
 
-// Shape  member: (Circle, 1.5)  JSON {"Circle":1.5};   member: Origin  JSON "Origin"
-//        non-member: (Triangle, 1), (Circle, "1"), Circle (a payload is required)
 // Event  member: {("kind", "click"), ("x", 3)}          JSON {"kind":"click","x":3}
 //        non-member: {("kind", "key"), ("x", 3)}        Key requires "code"; Click requires kind "click"

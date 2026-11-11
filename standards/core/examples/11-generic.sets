@@ -19,7 +19,7 @@ Page({T sub Item}): {
     r suchthat
     r in Record and
     ("items", items) in r and items in Seq(T) and
-    r in OptionalField({"next"}, String)
+    r in OptionalField("next", String)
 }
 
 StrBox = Box(String)

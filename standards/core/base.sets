@@ -9,13 +9,20 @@
 // file came from.
 
 // ---------------------------------------------------------------------
-// Universal and empty domains (GUIDE "universal domain", "phi")
+// Universal and empty domains (GUIDE "universal domain", "phi").
+// `U` and `Phi` are the only spellings; there are no aliases (VM-LEX-5).
 // ---------------------------------------------------------------------
 
 U = { x suchthat x in {x} }
-u = U
-phi = {}
-Phi = phi
+Phi = {}
+
+// The one nothing, declared by a deliberate paradox: it adds no member to
+// Phi, and `x in Phi` in a rule never holds (VM-AX-5).
+Nothing in Phi
+
+// The two outcomes of a rule. Truth isn't a value (VM-AX-4).
+Truef: \\ in U
+Falsef: \\ in Phi
 
 // ---------------------------------------------------------------------
 // Domain operations (GUIDE "Domain operations built on axioms")
@@ -38,12 +45,12 @@ Fractional
 Real = union(Integer, Fractional)
 
 // ---------------------------------------------------------------------
-// Atom rosters (VM-AX-3, VM-AX-4)
+// Atom rosters (VM-AX-3, VM-AX-4). A nullable domain is
+// union(T, {Nothing}); there's no null atom (VM-AX-5).
 // ---------------------------------------------------------------------
 
 Boolean = {true, false}
-Null = {null}
-IEEESpecial = {NaN, PositiveInfinity, NegativeInfinity, NegativeZero}
+IEEESpecial = {NotANumber, PositiveInfinity, NegativeInfinity, NegativeZero}
 
 // ---------------------------------------------------------------------
 // Ranged domains (VM-AX-6, VM-SUB-0)
@@ -62,7 +69,9 @@ Uint32 = { x suchthat x in Integer and x >= 0 and x <= 4294967295 }
 Uint64 = { x suchthat x in Integer and x >= 0 and x <= 18446744073709551615 }
 
 // Finite IEEE-754 values: m * 2 ^ e within the format's bounds.
-// m and e are rule-local binders (VM-RULE-2).
+// m and e are rule-local binders (VM-RULE-2). A whole number has both
+// forms here (2 and 2.0), because e >= 0 gives an Integer and e < 0 a
+// Fractional (VM-SUB-0, "Both forms").
 Binary64Finite = {
     x suchthat
     m in Integer and m > -9007199254740992 and m < 9007199254740992 and
@@ -88,7 +97,7 @@ Float32 = union(Binary32Finite, IEEESpecial)
 Char sub String
 
 // ---------------------------------------------------------------------
-// Collections (VALUE-MODEL.md §6.5)
+// Collections (VALUE-MODEL.md §6.4)
 // ---------------------------------------------------------------------
 
 // Finite sequences as nested pairs ending in the empty tuple:
@@ -96,33 +105,33 @@ Char sub String
 EmptySeq = {()}
 Seq({T sub U}): union(EmptySeq, { (h, t) suchthat h in T and t in Seq(T) })
 
-// Finite subdomains of T.
+// Subdomains of T (VM-SET-1).
 SetOf({T sub U}): { s suchthat s sub T }
 
-// Finite sets of (key, value) pairs with unique keys (VM-MAP-1).
-Map({K sub U}, {V sub U}): { m suchthat m sub product2(K, V) }
+// Domains of (key, value) pairs with unique keys (VM-MAP-1).
+Map({K sub U}, {V sub U}): {
+    m suchthat
+    m sub product2(K, V) and
+    m not in { s suchthat (k, v) in s and (k, w) in s and v not in singleton(w) }
+}
 
 // ---------------------------------------------------------------------
 // Records (VALUE-MODEL.md §6.1). A record is a set of (key, value)
-// tuples with string keys. Record domains are open unless they say
-// otherwise.
+// tuples; a key can be any value. The empty record is {}. Record domains
+// are open unless they say otherwise.
 // ---------------------------------------------------------------------
 
-Record = Map(String, U)
+Record = Map(U, U)
 
 // Records whose fields with a key in K, if present, hold a value in V.
-OptionalField({K sub U}, {V sub U}): {
+OptionalFields({K sub U}, {V sub U}): {
     r suchthat
     r in Record and
     r not in { s suchthat (k, v) in s and k in K and v not in V }
 }
 
+// The single-key form of OptionalFields.
+OptionalField({k suchthat k in U}, {V sub U}): OptionalFields({k}, V)
+
 // Records with no keys outside K (closed records).
 OnlyKeys({K sub U}): { r suchthat r in Record and r sub product2(K, U) }
-
-// ---------------------------------------------------------------------
-// Tagged variants (VALUE-MODEL.md §6.3). T is normally a singleton atom
-// domain such as {Circle}.
-// ---------------------------------------------------------------------
-
-Variant({T sub U}, {P sub U}): product2(T, P)

@@ -2,7 +2,7 @@
 
 - **Standard version:** 0.2.0
 - **Target language / version:** none. This is the base that every `.sets → <language>` standard extends.
-- **Runtime / serialization context:** the canonical JSON projection (VM-JSON-1), unless the language standard overrides it
+- **Runtime / serialization context:** the canonical JSON projection ([JSON-MODEL.md](../JSON-MODEL.md), VM-JSON-1), unless the language standard overrides it
 - **Targets `.sets` spec at commit:** `f5a56cc` (`GUIDE.md`)
 - **Depends on:** [Core Value Model](../VALUE-MODEL.md), [`base.sets`](../base.sets)
 - **Status:** draft
@@ -32,7 +32,7 @@ Rule IDs are `CT-*`. **Invariant** rules can't be overridden; **Default** rules 
   * [5.9 Collections](#59-collections)
   * [5.10 Transformers and generics](#510-transformers-and-generics)
   * [5.11 Predicates and value transformers](#511-predicates-and-value-transformers)
-  * [5.12 `U` and `phi`](#512-u-and-phi)
+  * [5.12 `U` and `Phi`](#512-u-and-phi)
   * [5.13 Recursion](#513-recursion)
 * [6. Domain-form coverage](#6-domain-form-coverage)
 * [7. Runtime support](#7-runtime-support)
@@ -49,7 +49,7 @@ Rule IDs are `CT-*`. **Invariant** rules can't be overridden; **Default** rules 
 **CT-SCOPE-2 (Invariant). Output.** For each named domain, the adapter generates:
 1. a **type** (the representation, §2.1);
 2. a **membership check** whenever the representation is over-approximate;
-3. a **codec** for the wire (VM-JSON-1 by default), where decoding accepts every member and rejects every non-member.
+3. a **codec** for the wire (VM-JSON-1 in [JSON-MODEL.md](../JSON-MODEL.md) by default), where decoding accepts every member and rejects every non-member (VM-WIRE-1).
 
 **CT-SCOPE-3 (Default). Runtime support.** Generated code may depend on a small support library (§7). A language standard that forbids that inlines the helpers.
 
@@ -67,7 +67,7 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 | `Tuple(R1 … Rn)` | Positional fields. | tuple, struct with `Item0…`, fixed array |
 | `List(R)`, `Set(R)`, `Dict(RK, RV)` | Native collections. | slice, `Vec`, `list`, `Map` |
 | `Presence(R)` | Field present or missing, distinguishable. | `Option<T>`, pointer plus `omitempty`, `?:` |
-| `Nullable(R)` | Value or `null`, distinguishable. | `T \| null`, `Option<T>`, pointer |
+| `Nullable(R)` | Value or `Nothing` (null), distinguishable. | `T \| null`, `Option<T>`, pointer |
 | `Sum(B1 … Bn)` | Exactly one of disjoint branches. | tagged enum, sealed interface, discriminated union |
 | `Overlap(B1 … Bn)` | One or more of overlapping branches at once. | struct of optional branch views (README Go `Human`) |
 | `Checked(R, c)` | `R` plus a generated check `c`. | newtype with validating constructor and decoder |
@@ -101,7 +101,6 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 | Element of `Seq`/`SetOf` in `P` | `P` + `Item` |
 | Key / value of `Map` in `P` | `P` + `Key` / `P` + `Value` |
 | Branch `i` of a union `P` | `P` + the branch domain's name, or `P` + `Branch` + `i` if anonymous |
-| Variant `Tag` of `P` | `P` + `Pascal(Tag)` |
 
 **CT-NAME-3 (Invariant). Roster members and keys keep their spelling on the wire.** An identifier derived from a roster member or a record key is only a name. The codec always uses the exact value: the quoted string, the atom spelling, or the number.
 
@@ -122,7 +121,7 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 | `CT-D-UNSUPPORTED` | error | The domain form has no representation rule. |
 | `CT-D-UNDER` | warning | The representation loses members; the message names them. |
 | `CT-D-UNBOUND` | warning | An axiom has no binding; `Opaque` is used (CT-AXB-3). |
-| `CT-D-WIRE-AMBIGUOUS` | error | The wire projection isn't one-to-one on this domain (VM-JSON-2). |
+| `CT-D-WIRE-AMBIGUOUS` | error | The wire projection isn't one-to-one on this domain (VM-WIRE-1; VM-JSON-2 for JSON). |
 | `CT-D-RECURSION` | error | The target can't represent this recursive domain. |
 
 ## 3. Axiom bindings
@@ -136,18 +135,20 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 | `Integer` | All integers | exact (big integer); a bounded native integer is **under** | — |
 | `Natural` | Integers ≥ 0 | exact or over + check | `n ≥ 0` |
 | `IntN`, `UintN` | Bounded integers | exact (native width) or over + check (wider native) | range |
-| `Fractional` | Non-integer finite reals | exact (arbitrary-precision rational/decimal) or **under** | not an integer |
+| `Fractional` | Finite reals written with a fractional part, including `1.0` | exact (arbitrary-precision rational/decimal) or **under** | — |
 | `Real` | Finite reals | as `Fractional` | — |
 | `Binary64Finite` | Finite binary64 values | over + check on native `f64` | finite |
 | `Binary32Finite` | Finite binary32 values | exact or over + check | finite, representable in binary32 |
 | `Float64`, `Float32` | Including `IEEESpecial` | exact on native floats | — |
 | `Boolean` | `{true, false}` | exact | — |
-| `Null` | `{null}` | exact (unit / null type) | — |
-| `Record` | All records | `Record(; rest)`: a string-keyed `Dict` of raw values | — |
+| `{Nothing}` | The one nothing (VM-AX-5) | exact (unit / null type) | — |
+| `Record` | All records | `Record(; rest)`: a `Dict` from raw keys to raw values | — |
 
 **CT-AXB-2 (Default). Native numeric choice.** A ranged integer domain (VM-SUB-0), from `base` or written by a source adapter, binds to the narrowest native type that contains it. The adapter compares the bounds in the rule with the native widths; it doesn't match on the domain's name. If none matches exactly, the binding uses a wider native type with a range check. `Binary64Finite` and `Binary32Finite` bind to native binary64 and binary32 by recognizing their `m * 2 ^ e` rule and bounds; the check is only that the native value is finite. A union of numeric domains is bound as a single scalar under CT-UNI-5.
 
 **CT-AXB-3 (Invariant). Unbound axioms.** An axiom or described subdomain with no row in the language standard's table becomes `Opaque(name)`. That type keeps the raw wire value so it round-trips, and the adapter emits `CT-D-UNBOUND`. Guessing a native type from the axiom's name isn't allowed.
+
+**CT-AXB-4 (Default). Merging domains.** Top-level domains are disjoint in `.sets`, but a target that has one representation for several of them binds them to that one type (VM-KIND-2): JavaScript binds `Integer`, `Fractional` and `Real` to `number`. The language standard may merge in one pass or several (bind each, then unify identical results). The `.sets` domains don't change. A target can merge a distinction but never split one the input doesn't make (VM-PRES-1), so the language standard names what each merge loses (for `number`, the `1` vs `1.0` form).
 
 ## 4. Decisions
 
@@ -162,7 +163,7 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 | Rosters | `Enum` per kind; mixed kinds become a `Sum` of enums. | CT-ROS-* |
 | Transformers returning domains | Generics, or monomorphization per call site. | CT-GEN-* |
 | Predicates, value transformers | Functions, used inside checks. | CT-FN-* |
-| `U` / `phi` | `Top` / `Bottom`, or rejection. | CT-TOP-* |
+| `U` / `Phi` | `Top` / `Bottom`, or rejection. | CT-TOP-* |
 | Imports | Module imports; `base` is bound, not emitted. | CT-DECL-3 |
 
 ## 5. Representation rules
@@ -187,9 +188,9 @@ Each rule states its exactness. Examples live in [`../examples/`](../examples/):
 
 **CT-ROS-3 (Invariant). Singleton.** A singleton roster is a one-member `Enum`, or a constant where the language has literal types (exact). It's never widened to the member's kind without a check.
 
-**CT-ROS-4 (Invariant). Domain-valued members.** A roster whose member is a domain symbol (`{Number}`) is a domain of domains. It is **unsupported** (`CT-D-UNSUPPORTED`) until a language standard defines a representation for domain values.
+**CT-ROS-4 (Invariant). Domain-valued members.** A roster whose member is a domain (`{Integer}`) is a domain whose members are domains. Domains are values (VM-KIND-1), but core gives no runtime representation for a domain as a value, so this is **unsupported** (`CT-D-UNSUPPORTED`) until a language standard defines one (a type descriptor or reflection handle, for example).
 
-**CT-ROS-5 (Invariant).** `{Boolean members}` and `{null}` use the bound `Boolean` and `Null` types, never a generated enum.
+**CT-ROS-5 (Invariant).** A roster of `Boolean` members and `{Nothing}` use the bound `Boolean` and null types, never a generated enum.
 
 **Example:** [`examples/02-rosters.sets`](../examples/02-rosters.sets)
 
@@ -211,20 +212,20 @@ Each rule states its exactness. Examples live in [`../examples/`](../examples/):
 
 **CT-TUP-2 (Invariant). No flattening.** A nested tuple `((x), (y))` is a `Tuple` whose components are 1-tuples. A 1-tuple `(x)` is `Tuple(R)` and never `R`.
 
-**CT-TUP-3 (Invariant).** The empty tuple `()` is a unit-like `Tuple()` that projects to `[]`.
+**CT-TUP-3 (Invariant).** The unit domain `{()}` becomes a unit-like `Tuple()`, which projects to `[]` in JSON. `()` is conceptually `{}` (VM-AX-5), so in a domain that admits both an empty tuple and an empty record or collection, the wire projection must tell them apart or report `CT-D-WIRE-AMBIGUOUS`.
 
 **Example:** [`examples/05-tuple.sets`](../examples/05-tuple.sets)
 
 ### 5.5 Records
 
 **CT-REC-1 (Invariant). Recognition.** A builder `{ r suchthat r in Record and C1 and … and Cn }` is a record when every clause `Ci` is one of:
-- a required field: `("k", b) in r and b in V`, where `"k"` is a string literal and `b` is a binder used nowhere else;
-- an optional field: `r in OptionalField({"k"}, V)`;
-- a closing clause: `r in OnlyKeys(K)`, where `K` is a roster of string literals.
+- a required field: `("k", b) in r and b in V`, where `"k"` is a literal key (any value, usually a string; VM-REC-1) and `b` is a binder used nowhere else;
+- an optional field: `r in OptionalField("k", V)`, or `r in OptionalFields(K, V)` with `K` a roster of literal keys, which is one optional field per key;
+- a closing clause: `r in OnlyKeys(K)`, where `K` is a roster of literal keys.
 
 Keys are pairwise distinct. The representation is `Record(k: R(V) … )`, with optional fields as `Presence(R(V))` (CT-OPT-1). A required or optional field is exact when `R(V)` is exact.
 
-**CT-REC-2 (Invariant). Open records keep unknown fields.** Without `OnlyKeys`, the record is open (VM-REC-3), and the representation gets a `rest` part: a string-keyed `Dict` of raw values. Decoding puts every unmentioned field in `rest`, and encoding writes it back, so open records round-trip exactly. Dropping `rest` is **under** (the lost values are every record with an extra field) and needs `CT-D-UNDER`.
+**CT-REC-2 (Invariant). Open records keep unknown fields.** Without `OnlyKeys`, the record is open (VM-REC-3), and the representation gets a `rest` part: a `Dict` from raw keys to raw values. Decoding puts every unmentioned field in `rest`, and encoding writes it back, so open records round-trip exactly. Dropping `rest` is **under** (the lost values are every record with an extra field) and needs `CT-D-UNDER`.
 
 **CT-REC-3 (Invariant). Closed decoding.** With `OnlyKeys`, there's no `rest`, and decoding rejects any key outside `K`.
 
@@ -234,26 +235,25 @@ Keys are pairwise distinct. The representation is `Record(k: R(V) … )`, with o
 
 ### 5.6 Optional fields and null
 
-**CT-OPT-1 (Invariant).** A field `r in OptionalField({"k"}, V)` is `Presence(R(V))`. On the wire, a missing field is an omitted key.
+**CT-OPT-1 (Invariant).** A field `r in OptionalField("k", V)` is `Presence(R(V))`. On the wire, a missing field is an omitted key.
 
-**CT-OPT-2 (Invariant).** A domain `union(V, Null)` is `Nullable(R(V))`.
+**CT-OPT-2 (Invariant).** A domain `union(V, {Nothing})` is `Nullable(R(V))` (VM-AX-5).
 
-**CT-OPT-3 (Invariant). Three states.** `OptionalField({"k"}, union(V, Null))` is `Presence(Nullable(R(V)))`. All three states (missing, `null`, value) must survive a round trip. If the language's idiomatic optional type merges them (Go `*T` with `omitempty`), the language standard prescribes a three-state wrapper. Merging them is **under** (the lost value is the missing key or `null`) and needs `CT-D-UNDER`.
+**CT-OPT-3 (Invariant). Three states.** `OptionalField("k", union(V, {Nothing}))` is `Presence(Nullable(R(V)))`. All three states (a missing tuple, `("k", Nothing)`, a value; VM-MISS-1) must survive a round trip. If the language's idiomatic optional type merges them (Go `*T` with `omitempty`), the language standard prescribes a three-state wrapper. Merging them is **under** (the lost value is the missing key or `null`) and needs `CT-D-UNDER`.
 
 **Example:** [`examples/04-optional-nullable.sets`](../examples/04-optional-nullable.sets)
 
 ### 5.7 Unions
 
 **CT-DISJ-1 (Invariant). Disjointness.** The adapter proves two domains `A` and `B` disjoint when any of these holds. Otherwise it assumes they overlap.
-1. Their members have different kinds (VM-KIND-1): string, number, atom, tuple, finite domain.
+1. Their members have different kinds (VM-KIND-1): string, number, atom, tuple, domain.
 2. Both are tuples of different arity.
 3. Both are records, one requires key `k`, and the other is closed with `OnlyKeys` that excludes `k`.
 4. Both are records that require the same key `k` with provably disjoint value domains (this is how tag fields discriminate).
 5. Both are rooted in different top-level axioms, or are rosters with no common member, or one is a roster none of whose members is in the other.
-6. Both are `Variant`s with different tags.
-7. Both are described subdomains whose prose extents are disjoint (for example `Int8` and a roster of strings; not `Int8` and `Uint8`).
+6. Both are described subdomains whose prose extents are disjoint (for example `Int8` and a roster of strings; not `Int8` and `Uint8`).
 
-Rule 1 treats `Seq` (whose members are `()` and 2-tuples) as overlapping any 0- or 2-tuple domain, unless the components prove otherwise.
+Rule 1 treats `Seq` (whose members are `()` and 2-tuples) as overlapping any 0- or 2-tuple domain, unless the components prove otherwise. Because `()` is treated as `{}` (VM-AX-5), it also treats `Seq` as overlapping any domain that admits `{}` (records, sets, maps).
 
 **CT-UNI-1 (Invariant). Disjoint unions.** If all branches are pairwise disjoint, the union becomes `Sum(B1 … Bn)` (exact).
 
@@ -285,7 +285,7 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 
 ### 5.8 Intersections and differences
 
-**CT-INT-1 (Invariant).** `intersect(A, B)` becomes `Checked(R(A), member of B)`, where `A` is the operand with the narrower representation (over + check). Two records intersect fieldwise into one `Record`: every key of either side, required if either side requires it, typed by the intersection of both sides' value domains, with `rest` only if both sides are open (exact when each field intersection is exact). If a closed side excludes a key the other side requires, the result is `phi` (CT-TOP-2).
+**CT-INT-1 (Invariant).** `intersect(A, B)` becomes `Checked(R(A), member of B)`, where `A` is the operand with the narrower representation (over + check). Two records intersect fieldwise into one `Record`: every key of either side, required if either side requires it, typed by the intersection of both sides' value domains, with `rest` only if both sides are open (exact when each field intersection is exact). If a closed side excludes a key the other side requires, the result is `Phi` (CT-TOP-2).
 
 **CT-DIF-1 (Invariant).** `difference(A, B)` becomes `Checked(R(A), not member of B)` (over + check). If `B` is provably disjoint from `A`, it's just `R(A)` (exact).
 
@@ -295,9 +295,11 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 
 **CT-COL-1 (Invariant).** `Seq(T)` becomes `List(R(T))` (exact). The adapter recognizes `Seq` by its `base` binding and never generates nested pairs.
 
-**CT-COL-2 (Default).** `SetOf(T)` becomes `Set(R(T))` when `R(T)` is hashable or comparable in the target (exact). Otherwise it's `Checked(List(R(T)), no duplicates)` (over + check). The wire form follows VM-JSON-1: a sorted array.
+**CT-COL-2 (Default).** `SetOf(T)` becomes `Set(R(T))` when `R(T)` is hashable or comparable in the target (exact). Otherwise it's `Checked(List(R(T)), no duplicates)` (over + check). The wire form follows the wire model; in JSON it's a sorted array (VM-JSON-1).
 
 **CT-COL-3 (Default).** `Map(K, V)` becomes `Dict(R(K), R(V))` when `R(K)` can be a native key (exact). Otherwise it's `Checked(List(Tuple(R(K), R(V))), unique keys)` (over + check).
+
+**CT-COL-4 (Default). Wrapper types.** A language standard may represent a fundamental domain with a wrapper type when the wrapper holds exactly that domain (VM-PRES-2): JavaScript's `Set` for a record of keys with `()` values, or a date class for a timestamp string. The wrapper is a representation choice; the domain stays the fundamental.
 
 **Example:** [`examples/10-collections.sets`](../examples/10-collections.sets)
 
@@ -307,7 +309,7 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 
 **CT-GEN-2 (Invariant). Call sites.** `N = F(A1 … An)` becomes an instantiation alias, or a monomorphized type named `N`.
 
-**CT-GEN-3 (Invariant).** `base` operations and structural transformers (`union`, `intersect`, `difference`, `singleton`, `product2`, `OptionalField`, `OnlyKeys`, `Variant`, `Seq`, `SetOf`, `Map`) are recognized by binding. They aren't emitted as generics.
+**CT-GEN-3 (Invariant).** `base` operations and structural transformers (`union`, `intersect`, `difference`, `singleton`, `product2`, `OptionalField`, `OptionalFields`, `OnlyKeys`, `Seq`, `SetOf`, `Map`) are recognized by binding. They aren't emitted as generics.
 
 **Example:** [`examples/11-generic.sets`](../examples/11-generic.sets)
 
@@ -317,11 +319,11 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 
 **CT-FN-2 (Default).** A transformer that returns a scalar or a tuple is code, not a type. It's emitted as a function only when a check uses it. Otherwise it's skipped, without a diagnostic.
 
-### 5.12 `U` and `phi`
+### 5.12 `U` and `Phi`
 
 **CT-TOP-1 (Invariant).** `U` becomes `Top`. Its codec accepts any wire value and keeps it as raw data, so it round-trips exactly. A target with no top type reports `CT-D-UNSUPPORTED`.
 
-**CT-TOP-2 (Invariant).** `phi` becomes `Bottom`. If the target has no uninhabited type, it uses a type with no public constructor and a decoder that always fails (exact). A record field of domain `phi` makes the whole record `phi`; the adapter reports this as a warning, because it's usually a source mistake.
+**CT-TOP-2 (Invariant).** `Phi` becomes `Bottom`. If the target has no uninhabited type, it uses a type with no public constructor and a decoder that always fails (exact). A record field of domain `Phi` makes the whole record `Phi`; the adapter reports this as a warning, because it's usually a source mistake.
 
 ### 5.13 Recursion
 
@@ -357,7 +359,7 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 | `SetOf`, `Map` | exact or over + check | CT-COL-2, CT-COL-3 |
 | Transformer returning a domain (generics) | exact | CT-GEN-1 |
 | Predicate, value transformer | code, not type | CT-FN-* |
-| `U`, `phi` | exact | CT-TOP-* |
+| `U`, `Phi` | exact | CT-TOP-* |
 | Recursive domain | exact | CT-RECUR-1 |
 | Cardinality constraints | gap | §9 |
 
@@ -381,7 +383,7 @@ Errors carry a path (`$.items[2].age`) and the domain that rejected the value.
 ## 8. Tests
 
 **CT-TEST-1 (Invariant).** For every rule a language standard instantiates, its test suite includes:
-- at least one **member** that round-trips: value → encode → decode → an equal value (VM-EQ-1);
+- at least one **member** that round-trips: value → encode → decode → an equal value (VM-EQ-1, so a `Fractional` `1.0` doesn't come back as the `Integer` `1`);
 - at least one **non-member** that decode rejects;
 - for overlapping unions, one value in **both** branches whose membership reports are both true after decoding.
 
@@ -391,7 +393,7 @@ The member and non-member vectors in [`../examples/`](../examples/) are the shar
 
 **G-T1. Cardinality.** A domain can't state "exactly n members" or "at most n", so collections have no length constraints beyond tuples. Interim: none needed. The source side reports `CS-D-WIDENED`.
 
-**G-T2. Domain values.** Rosters of domain symbols (CT-ROS-4) need a value-level representation of domains. Interim: unsupported.
+**G-T2. Domain values.** Domains are values (VM-KIND-1), and `SetOf` and `Map` admit infinite domains (VM-SET-1, VM-MAP-1). Rosters of domains (CT-ROS-4) and infinite collection members need a runtime representation of a domain as a value. Interim: unsupported; finite collections bind per CT-COL-*.
 
 **G-T3. Disjointness beyond shape.** CT-DISJ-1 is conservative. For example, it can't prove `{ x suchthat x in Integer and IsEven(x) }` and `{ x suchthat x in Integer and IsOdd(x) }` disjoint, so their union becomes `Overlap` (correct, but heavier than needed). *Non-normative proposal:* a `disjoint` declaration that source adapters may emit and target adapters trust only after checking it against vectors.
 

@@ -15,10 +15,10 @@ Ok = Boolean
 
 // Count
 //   member:      0, -2147483648, 2147483647
-//   non-member:  2147483648 (out of range), 1.5 (Fractional), "1" (String)
+//   non-member:  2147483648 (out of range), 1.5 and 1.0 (Fractional, VM-SUB-0), "1" (String)
 // Ratio
-//   member:      1 (same value as 1.0, VM-AX-2), 0.5, -7
-//   non-member:  NaN, PositiveInfinity (atoms, not in Binary64Finite), 0.1 (no exact binary64 value)
+//   member:      1 and 1.0 (two values; both forms are members, VM-SUB-0), 0.5, -7
+//   non-member:  NotANumber, PositiveInfinity (atoms, not in Binary64Finite), 0.1 (no exact binary64 value)
 // Name
 //   member:      "", "abc", "日本"
 //   non-member:  abc (atom), ("abc") (1-tuple)

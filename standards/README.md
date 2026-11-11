@@ -11,13 +11,18 @@ Source Language → [source standard] → .sets domain → [target standard] →
 
 The two sides never refer to each other. A target standard doesn't assume any particular source language.
 
+Two principles from the [core value model](core/VALUE-MODEL.md) shape every standard:
+- **Preserve the domain** (VM-PRES-1). A source standard keeps every distinction its language makes. A target standard may merge distinctions it can't represent, but it can't recover one the source never wrote down, so language standards merge and never invent.
+- **Fundamental domains only** (VM-PRES-2). `.sets` describes the data structures themselves. Wrapper types (a JavaScript `Set`, a `Date` class) narrow to the fundamentals they wrap, and each language standard defines its own wrappers.
+
 ## Layout
 
 ```text
 standards/
 ├── README.md                  this file
 ├── core/                      the core standard; every language standard extends it
-│   ├── VALUE-MODEL.md         shared by both directions: values, lexical conventions, JSON projection
+│   ├── VALUE-MODEL.md         shared by both directions: values, lexical conventions, equality
+│   ├── JSON-MODEL.md          the default wire: the canonical JSON projection
 │   ├── base.sets              the `base` superdomain: operations, axioms and structural transformers
 │   ├── source/STANDARD.md     core source standard  (any language → .sets)
 │   ├── target/STANDARD.md     core target standard  (.sets → any language)

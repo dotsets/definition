@@ -41,7 +41,7 @@ Rule IDs are `CS-*`. **Invariant** rules can't be overridden; **Default** rules 
 
 **CS-SCOPE-1 (Invariant). Every language standard declares its view.** The view is the set of values the standard's domains describe: "TypeScript as JSON over the wire", "Go values as `encoding/json` decodes them", "Python runtime objects". The same type can denote different domains in different views, so a standard without a declared view isn't usable.
 
-**CS-SCOPE-2 (Default). The core view is data.** Unless a language standard says otherwise, the view is serializable data: the values of the [Core Value Model](../VALUE-MODEL.md), carried by the canonical JSON projection (VM-JSON-1). Behavior (functions, channels, promises) and identity (pointers as addresses) are out of scope (§5.15).
+**CS-SCOPE-2 (Default). The core view is data.** Unless a language standard says otherwise, the view is serializable data: the values of the [Core Value Model](../VALUE-MODEL.md), carried by the canonical JSON projection ([JSON-MODEL.md](../JSON-MODEL.md), VM-JSON-1). Behavior (functions, channels, promises) and identity (pointers as addresses) are out of scope (§5.15).
 
 ## 2. Conventions
 
@@ -60,6 +60,8 @@ Address in geo
 
 **CS-CONV-3 (Default). Domain names.** A named source type becomes a domain of the same name. If the name contains a reserved character (`,`, `{`, `}`), the character is escaped as GUIDE describes (`\,`). If two source types in one module would produce the same domain name, the language standard defines the disambiguation.
 
+A declared name can't be redeclared (VM-NAME-1). If a source type's name is already in scope (a `base` name such as `String` or `Record`, an imported name, or an earlier declaration), the adapter renames the source type instead of emitting a second declaration. The language standard defines the rename.
+
 **CS-CONV-4 (Invariant). Determinism.** The same source input produces byte-identical `.sets`:
 - declarations follow source declaration order, after the imports;
 - record fields are listed in key order by Unicode code point (keys are values, so their order carries no meaning);
@@ -73,7 +75,7 @@ Address in geo
 
 ## 3. Axioms
 
-**CS-AX-1 (Invariant). Reuse `base`.** Scalars map to `base` axioms and described subdomains whenever the prose meaning matches (VALUE-MODEL §4–§5). A language standard declares a new axiom only under VM-AX-5.
+**CS-AX-1 (Invariant). Reuse `base`.** Scalars map to `base` axioms and described subdomains whenever the prose meaning matches (VALUE-MODEL §4–§5). A language standard declares a new axiom only under VM-AX-7.
 
 **CS-AX-2 (Invariant). Disjointness check.** Before declaring an axiom, the language standard shows that no value of the new axiom is a value of an existing axiom. If two of the language's types share values (`int` and `float` both hold `1`), they're described subdomains of one axiom, or unions of axioms, never two axioms.
 
@@ -84,14 +86,15 @@ Address in geo
 | Question | Decision | Rule |
 | -------- | -------- | ---- |
 | Record encoding | A set of `(key, value)` tuples: `{ r suchthat r in Record and ("name", name) in r and name in String }`. | VM-REC-*, CS-REC-1 |
-| Field identity | Keys are string values inside each tuple. They aren't binder names. | VM-REC-1 |
-| Optional / missing / null | A missing field is a missing tuple. Optional fields use `OptionalField`. `null` is a separate atom. | VM-MISS-*, CS-OPT-* |
+| Field identity | Keys are values inside each tuple: any value, usually strings in a wire view. They aren't binder names. | VM-REC-1 |
+| Optional / missing / null | A missing field is a missing tuple. Optional fields use `OptionalField`. Null is the value `Nothing`; a nullable value is `union(T, {Nothing})`. | VM-MISS-*, VM-AX-5, CS-OPT-* |
 | Open vs closed | Records are open by default. Closed records add `r in OnlyKeys({…})`. | VM-REC-3, VM-REC-4, CS-REC-4 |
 | Nominal vs structural | Structural. A name is a label for a domain. Brands that exist in the value are tags. | CS-NOM-* |
 | Generics | Transformers with domain parameters; a bound `T extends X` becomes `{T sub X}`. | CS-GEN-* |
 | Recursion | Self-reference by name. | VM-RECUR-1, CS-RECUR-1 |
 | Variable-length collections | `Seq`, `SetOf` and `Map` from `base`. | CS-COL-* |
 | Modules | One superdomain file per module; imports become `X in module`. | CS-MOD-* |
+| Wrapper types | Narrowed to the fundamental domains they wrap. | VM-PRES-2, CS-WRAP-1 |
 
 **Why open records by default.** With open records, README's `Human` is simply `union(Person, Aged)`: `{name: "abc", age: 123}` is a `Person` (it has a `name`) and an `Aged` (it has an `age`), so it's in the union. The visually similar mapping is also the correct one, and no merged rewrite is needed. Languages whose view rejects unknown keys add `OnlyKeys`, and then the same `union` means "exactly one shape".
 
@@ -101,7 +104,7 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 
 ### 5.1 Scalars
 
-**CS-SCA-1 (Invariant).** A scalar type maps to the narrowest `base` domain whose prose extent equals the type's extent in the view:
+**CS-SCA-1 (Invariant).** A scalar type maps to the narrowest `base` domain whose prose extent equals the type's extent in the view. The mapping keeps every distinction the view makes (VM-PRES-1): a view that tells integers from fractions keeps `Integer` and `Fractional` apart (VM-AX-2).
 
 | Abstract construct | Canonical `.sets` |
 | ------------------ | ----------------- |
@@ -112,11 +115,11 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 | IEEE binary64 including NaN and infinities | `Float64` |
 | IEEE binary64 without them (for example JSON) | `Binary64Finite` |
 | Boolean | `Boolean` |
-| Null / nil / None | `Null` |
+| Null / nil / None | `{Nothing}` (VM-AX-5) |
 | Unit `()` | `{()}` |
 | Byte string | `Seq(Uint8)` |
 
-**CS-SCA-2 (Invariant). Exact or wider, never narrower.** If no `base` domain matches exactly, the language standard declares a described subdomain (VM-SUB-2). It doesn't silently map to a narrower or wider domain. A wider mapping is allowed only with a diagnostic comment on the declaration, for example `Decimal = Real // CS-D-WIDENED: scale and precision not encoded`.
+**CS-SCA-2 (Invariant). Exact or wider, never narrower.** If no `base` domain matches exactly, the language standard declares a described subdomain (VM-SUB-2). It doesn't silently map to a narrower or wider domain. Widening loses a distinction the source makes (VM-PRES-1), so a wider mapping is allowed only with a diagnostic comment on the declaration, for example `Decimal = Real // CS-D-WIDENED: scale and precision not encoded`.
 
 **Edge cases.** Code units versus scalar values (UTF-16 strings that can contain lone surrogates aren't `String` in the core sense; the language standard declares its own described domain). An integer type the view serializes as a JSON string is a `String` subdomain in that view, not an `Integer`.
 
@@ -132,15 +135,15 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 
 **CS-NUM-3 (Default).** A numeric literal is written as its exact decimal value (VM-LEX-2). Every binary64 value has a finite decimal expansion.
 
-**Edge cases.** A literal that spells a domain name in scope becomes `"Number"` as a string or `@Number` as an atom (VM-LEX-4). The empty roster is `phi`, not `{}` (CS-TOP-2).
+**Edge cases.** A literal that spells a domain name in scope becomes `"Number"` as a string or `\Number` as an atom (VM-LEX-4). The empty roster is `Phi`, not `{}` (CS-TOP-2).
 
-**Rationale.** Writing enumerations as quoted strings by default would merge atoms and strings, and VM-JSON-2 would then fail to detect the ambiguity.
+**Rationale.** Writing enumerations as quoted strings by default would merge atoms and strings, and the wire projection would then fail to detect the ambiguity (VM-WIRE-1; VM-JSON-2 in [JSON-MODEL.md](../JSON-MODEL.md)).
 
 **Example:** [`examples/02-rosters.sets`](../examples/02-rosters.sets)
 
 ### 5.3 Records
 
-**CS-REC-1 (Invariant).** A record, struct, object or class shape maps to the canonical record form (VM-REC-2). `r in Record` comes first; then one clause per field in key order, using binders per CS-CONV-5:
+**CS-REC-1 (Invariant).** A record, struct, object or class shape maps to the preferred record form (VM-REC-2). `r in Record` is required, and adapters write it first; then one clause per field in key order, using binders per CS-CONV-5. The record form keeps every field the view has (VM-PRES-1):
 
 ```sets
 User = {
@@ -151,7 +154,7 @@ User = {
 }
 ```
 
-A required field is the pair `("k", k) in r and k in T`. An optional field is `r in OptionalField({"k"}, T)` in the same key-ordered position.
+A required field is the pair `("k", k) in r and k in T`. An optional field is `r in OptionalField("k", T)` in the same key-ordered position.
 
 **CS-REC-2 (Default). Keys are wire keys.** A field's key is its name in the view. In a JSON view that's the serialized key after renames (`json:"user_name"` → `"user_name"`), not the source identifier. Language-specific spellings never appear in `.sets` except as key values.
 
@@ -159,7 +162,7 @@ A required field is the pair `("k", k) in r and k in T`. An optional field is `r
 
 **CS-REC-4 (Default). Openness follows the view.** Records are open (VM-REC-3). If the view rejects unknown keys (`additionalProperties: false`, `#[serde(deny_unknown_fields)]`, a strict decoder), the record ends with `r in OnlyKeys({k1, …, kn})` listing every key it declares, in key order.
 
-**Edge cases.** An empty open record `{}` → `Record`. An empty closed record → `{ r suchthat r in Record and r in OnlyKeys(phi) }`, whose only member is `{}`. Duplicate keys can't occur (VM-MAP-1). Default values aren't domain information; a field with a default is required or optional according to the view.
+**Edge cases.** An empty open record `{}` → `Record`. An empty closed record → `{ r suchthat r in Record and r in OnlyKeys(Phi) }`, whose only member is `{}`. Duplicate keys can't occur (VM-MAP-1). Default values aren't domain information; a field with a default is required or optional according to the view.
 
 **Example:** [`examples/03-record.sets`](../examples/03-record.sets)
 
@@ -168,14 +171,14 @@ A required field is the pair `("k", k) in r and k in T`. An optional field is `r
 **CS-OPT-1 (Invariant). Optional field.** A field that can be missing in the view uses `OptionalField`:
 
 ```sets
-r in OptionalField({"age"}, Integer)
+r in OptionalField("age", Integer)
 ```
 
-**CS-OPT-2 (Invariant). Nullable value.** A value that can be null uses `union(T, Null)`, wherever it appears.
+**CS-OPT-2 (Invariant). Nullable value.** A value that can be null uses `union(T, {Nothing})`, wherever it appears (VM-AX-5).
 
-**CS-OPT-3 (Invariant). Keep the states apart.** A field that can be missing, null or a value is `r in OptionalField({"k"}, union(T, Null))`. Only merge missing and `null` when the view itself can't tell them apart, and say so in the language standard. Example: Go `*T` with `omitempty` decodes both a missing key and `null` to `nil`.
+**CS-OPT-3 (Invariant). Keep the states apart.** A field that can be missing, null or a value is `r in OptionalField("k", union(T, {Nothing}))`: a missing tuple, the tuple `("k", Nothing)`, or a value (VM-MISS-1). Only merge missing and null when the view itself can't tell them apart, and say so in the language standard. Example: Go `*T` with `omitempty` decodes both a missing key and `null` to `nil`.
 
-**CS-OPT-4 (Default). Language "undefined".** A language with an `undefined` value that differs from absence in the view declares its own atom (`Undefined = {undefined}`) in its superdomain.
+**CS-OPT-4 (Default). Language "undefined".** A language with an `undefined` value that differs from absence in the view declares its own atom (`Undefined = {undefined}`) in its superdomain (VM-AX-5, VM-MISS-1).
 
 **Example:** [`examples/04-optional-nullable.sets`](../examples/04-optional-nullable.sets)
 
@@ -211,9 +214,9 @@ Human = union(Person, Aged)
 
 ### 5.7 Tagged unions
 
-**CS-TAG-1 (Invariant).** A sum type whose variants are distinguishable in the value maps to `union` of its variants in source order. The shape of each variant follows the view:
-- In the core view, the shape is `Variant({Tag}, Payload)` or the atom `{Tag}` (VM-VAR-1).
+**CS-TAG-1 (Invariant).** A sum type whose variants are distinguishable in the value maps to `union` of its variants in source order. Core has no variant encoding; each variant is written with fundamentals (records, tuples, atoms) in the shape the view gives it (VM-PRES-2):
 - When the view embeds the tag in a record (internally tagged JSON, `{"kind": "circle", "r": 1}`), the variant is a record whose tag field has a singleton domain: `("kind", kind) in r and kind in {"circle"}`.
+- For other shapes (externally or adjacently tagged, a bare tag without payload), the language standard defines the encoding.
 
 **Rationale.** The representation follows where the tag lives in the value, not how the source declares it. Both forms are disjoint by construction, which CT-DISJ-1 can detect.
 
@@ -223,19 +226,19 @@ Human = union(Person, Aged)
 
 **CS-INT-1 (Invariant).** `A & B` maps to `intersect(A, B)`. With open records this is the record that has both sets of fields: `intersect(Named, Dated)` admits records with both a `name` and an `at`.
 
-**Edge cases.** Two closed records with different key sets intersect to `phi`, which is the correct domain for that view.
+**Edge cases.** Two closed records with different key sets intersect to `Phi`, which is the correct domain for that view.
 
 **Example:** [`examples/09-intersection-difference.sets`](../examples/09-intersection-difference.sets)
 
 ### 5.9 Top and bottom
 
-**CS-TOP-1 (Invariant).** A type that admits every value in the view (`unknown`, `any`, `interface{}`, `object`) maps to `U` only if the view really admits every value. Otherwise it maps to the union of what the view admits. A JSON view admits `union(String, union(Real, union(Boolean, union(Null, union(Seq(U), Record)))))`; the language standard defines this as a named domain such as `JsonValue`.
+**CS-TOP-1 (Invariant).** A type that admits every value in the view (`unknown`, `any`, `interface{}`, `object`) maps to `U` only if the view really admits every value. Otherwise it maps to the union of what the view admits. A JSON view admits `union(String, union(Real, union(Boolean, union({Nothing}, union(Seq(U), Record)))))`; the language standard defines this as a named domain such as `JsonValue`.
 
-**CS-TOP-2 (Invariant).** A type with no values (`never`, `!`, `Nothing`) maps to `phi`.
+**CS-TOP-2 (Invariant).** A type with no values (`never`, `!`, Scala's `Nothing`) maps to `Phi`. It isn't the core value `Nothing` (VM-AX-5).
 
 ### 5.10 Collections
 
-**CS-COL-1 (Invariant).** Variable-length list, array, slice → `Seq(T)`. Set → `SetOf(T)`. Map or dictionary → `Map(K, V)`. Index signature `{[k: string]: V}` → `Map(String, V)`.
+**CS-COL-1 (Invariant).** Variable-length list, array, slice → `Seq(T)`. Set → `SetOf(T)`, or a record of keys with `()` values when the language standard reads its set type that way (VM-SET-1, VM-PRES-2). Map or dictionary → `Map(K, V)`. Index signature `{[k: string]: V}` → `Map(String, V)`.
 
 **CS-COL-2 (Invariant).** A record with fixed fields plus an index signature for the rest is the intersection of the record and a constraint on its other fields. That's expressible only when the fixed fields' values are also in `V`: `intersect(Fixed, Map(String, V))`. Otherwise it's a gap (§7, G-3); the adapter emits the open record `Fixed` with a `// CS-D-GAP index-signature` comment, and reports a diagnostic.
 
@@ -246,6 +249,8 @@ Human = union(Person, Aged)
 **CS-NOM-1 (Invariant). Names don't create values.** `type A = B` → `A = B`. A nominal newtype (`type Celsius float64`, `struct Meters(f64)` when serialized transparently) whose values are indistinguishable from its base in the view is also `A = B`. The adapter doesn't invent a disjoint axiom to model nominality.
 
 **CS-NOM-2 (Invariant). Brands that exist in the value are part of it.** If the view carries the type's identity (a type tag, a class discriminator), that tag is a field or a variant tag, per CS-TAG-1.
+
+**CS-WRAP-1 (Invariant). Wrappers narrow to fundamentals.** A class or library type that wraps a fundamental domain (a set over an object, a date over a number or string, a boxed big integer) maps to the fundamental it wraps in the view (VM-PRES-2). Core has no rule for any particular wrapper; the language standard names its wrappers and their fundamentals.
 
 **CS-NOM-3 (Default). Phantom brands are dropped.** A compile-time-only brand (`string & {__brand: "Id"}`) has no runtime value, so it maps to its base domain. The language standard can override this when its toolchain needs brands back. It does so with a described subdomain with no prose extent (`UserId sub String`, which GUIDE reads as the same as `String`), never with an axiom.
 
@@ -321,6 +326,7 @@ NonEmptyString = difference(String, {""})
 | Lists, sets, maps, index signatures | mapped | CS-COL-1 |
 | Fixed fields plus an index signature | mapped when fixed values fit `V`; otherwise gap (G-3) | CS-COL-2 |
 | Aliases, newtypes, brands | mapped | CS-NOM-* |
+| Wrapper types | mapped to the wrapped fundamental | CS-WRAP-1 |
 | Generics, bounds | mapped | CS-GEN-1, CS-GEN-2 |
 | Type-level computation | mapped by evaluation | CS-GEN-3 |
 | Recursive types | mapped | CS-RECUR-1 |
@@ -329,13 +335,13 @@ NonEmptyString = difference(String, {""})
 | Functions, channels, promises | out of scope | CS-BEH-1 |
 | Modules, imports | mapped | CS-MOD-* |
 
-Totals over 24 constructs: 22 mapped (one of them partly a gap), 1 gap, 1 out of scope.
+Totals over 25 constructs: 23 mapped (one of them partly a gap), 1 gap, 1 out of scope.
 
 ## 7. Open Gaps
 
 **G-1. Lengths and patterns.** Numeric ranges are covered by VM-AX-6, but there are no string or collection length operators and no regular expressions. Interim: described subdomains with prose extents (VM-SUB-2). *Non-normative proposal:* a `Length` transformer on strings and sequences, and a `Matches` predicate over a pattern string.
 
-**G-2. Cardinality and finiteness.** `SetOf` and `Map` rely on prose for finiteness and key uniqueness (VM-SET-1, VM-MAP-1). Interim: the prose is normative.
+**G-2. Cardinality and finiteness.** The grammar can't say that a domain is finite. `SetOf` and `Map` admit infinite domains (VM-SET-1, VM-MAP-1), and `Map` states key uniqueness in its builder. Interim: a language standard narrows its finite collections in prose.
 
 **G-3. "Every other field".** An open record says nothing about the fields it doesn't mention. Constraining only those (an index signature whose value type excludes a fixed field's type) needs a way to name "fields whose key isn't in K". *Non-normative proposal:* a `base` transformer `OtherFields({K sub U}, {V sub U}): { r suchthat r in Record and r not in { s suchthat (k, v) in s and k not in K and v not in V } }`. It uses only existing grammar, so it can be adopted once reviewed.
 
