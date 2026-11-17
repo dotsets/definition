@@ -46,6 +46,10 @@ The empty value may be written `()` or `Phi`; in the core context they're treate
 
 **Collisions.** When two source values become one `.sets` value, first ask why. If they describe the same domain under different source semantics, the collision is justified: there is no difference in the data to preserve, so VM-PRES-1 holds. Only a collision between different data is a defect to fix.
 
+**VM-PRES-3 (Invariant). Runtime domains aren't data.** `.sets` describes data at rest. A type whose values exist only while a program runs (a promise, a function, a lock) isn't data, and its behavior isn't transpiled. It's a *runtime domain*: a tagged domain named by its concept, never by its source spelling. It only has to be unique and equal to itself. It says nothing about bytes, and it's never serialized or checked as data.
+
+The core standard declares the common concepts and their tags in [RUNTIME.md](RUNTIME.md); each language standard maps its own types to them. A JavaScript `Promise<string>` is `Async(String)`, never an atom or domain named `Promise`, so it can't collide with an unrelated type that another language happens to call `Promise`.
+
 ## 1. Value kinds
 
 **VM-KIND-1 (Invariant).** Every value in the core model has exactly one of these kinds:

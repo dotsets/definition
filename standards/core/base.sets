@@ -135,3 +135,11 @@ OptionalField({k suchthat k in U}, {V sub U}): OptionalFields({k}, V)
 
 // Records with no keys outside K (closed records).
 OnlyKeys({K sub U}): { r suchthat r in Record and r sub product2(K, U) }
+
+// ---------------------------------------------------------------------
+// Tagged domains (VM-PRES-3). Tagging D with t gives the domain whose one
+// member is (t, D). Two tagged domains are equal exactly when their tags
+// and their domains are equal (singleton and tuple equality, VM-EQ-1).
+// ---------------------------------------------------------------------
+
+Tagged({t suchthat t in U}, {D sub U}): { (t, D) }

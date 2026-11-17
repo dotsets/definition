@@ -1,0 +1,18 @@
+// runtime.sets: the `runtime` superdomain.
+//
+// Runtime concepts (RUNTIME.md). A runtime domain isn't data: it is a
+// tagged domain that is unique and equal only to itself (VM-PRES-3). Its
+// one member stands in for the concept; it is never serialized or checked
+// as data. Tags are the reserved atoms of RT-1.
+
+Phi in base
+Tagged in base
+U in base
+
+Async({T sub U}): Tagged(RuntimeAsync, T)
+// Function tags the pair of its domains, so Function(Phi, String) and
+// Function(Phi, Integer) stay distinct.
+Function({A sub U}, {R sub U}): Tagged(RuntimeFunction, { (A, R) })
+Mutex = Tagged(RuntimeMutex, Phi)
+Channel({T sub U}): Tagged(RuntimeChannel, T)
+Handle = Tagged(RuntimeHandle, Phi)
