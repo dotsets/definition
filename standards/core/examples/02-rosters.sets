@@ -17,8 +17,7 @@ Mixed = {"auto", 0}
 Keyword = {"Number", \Number}
 
 // Status   member: "Failed"           non-member: Failed (atom), "failed"
-// Phase    member: Pending            non-member: "Pending"            JSON of Pending: "Pending"
+// Phase    member: Pending            non-member: "Pending"
 // Answer   member: 42                 non-member: 42.5, "42"
 // Mixed    member: "auto", 0          non-member: "0", auto
 // Keyword  member: "Number", \Number  non-member: 1 (member of the domain Number, not of Keyword)
-//   Keyword's JSON projection is ambiguous: both members project to "Number" (VM-JSON-2 in JSON-MODEL.md, CT-D-WIRE-AMBIGUOUS).

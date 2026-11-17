@@ -2,7 +2,7 @@
 
 - **Standard version:** 0.2.0
 - **Target language / version:** none. This is the base that every `.sets → <language>` standard extends.
-- **Runtime / serialization context:** the canonical JSON projection ([JSON-MODEL.md](../JSON-MODEL.md), VM-JSON-1), unless the language standard overrides it
+- **Runtime / serialization context:** none. The wire comes from the input's view domain (CS-SCOPE-1); the language standard defines the codec for it
 - **Targets `.sets` spec at commit:** `f5a56cc` (`GUIDE.md`)
 - **Depends on:** [Core Value Model](../VALUE-MODEL.md), [`base.sets`](../base.sets)
 - **Status:** draft
@@ -49,7 +49,7 @@ Rule IDs are `CT-*`. **Invariant** rules can't be overridden; **Default** rules 
 **CT-SCOPE-2 (Invariant). Output.** For each named domain, the adapter generates:
 1. a **type** (the representation, §2.1);
 2. a **membership check** whenever the representation is over-approximate;
-3. a **codec** for the wire (VM-JSON-1 in [JSON-MODEL.md](../JSON-MODEL.md) by default), where decoding accepts every member and rejects every non-member (VM-WIRE-1).
+3. a **codec** for the view's wire (CS-SCOPE-1), as the language standard defines it, where decoding accepts every member and rejects every non-member (VM-WIRE-1).
 
 **CT-SCOPE-3 (Default). Runtime support.** Generated code may depend on a small support library (§7). A language standard that forbids that inlines the helpers.
 
@@ -121,7 +121,7 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 | `CT-D-UNSUPPORTED` | error | The domain form has no representation rule. |
 | `CT-D-UNDER` | warning | The representation loses members; the message names them. |
 | `CT-D-UNBOUND` | warning | An axiom has no binding; `Opaque` is used (CT-AXB-3). |
-| `CT-D-WIRE-AMBIGUOUS` | error | The wire projection isn't one-to-one on this domain (VM-WIRE-1; VM-JSON-2 for JSON). |
+| `CT-D-WIRE-AMBIGUOUS` | error | The wire projection isn't one-to-one on this domain (VM-WIRE-1). |
 | `CT-D-RECURSION` | error | The target can't represent this recursive domain. |
 
 ## 3. Axiom bindings
@@ -208,11 +208,11 @@ Each rule states its exactness. Examples live in [`../examples/`](../examples/):
 
 ### 5.4 Tuples
 
-**CT-TUP-1 (Default).** `{ (x1 … xn) suchthat x1 in D1 and … }` becomes `Tuple(R1 … Rn)` (exact if each `Ri` is exact). Where the language needs field names, components are named `Item0 … ItemN-1`. The wire form is a JSON array of length `n`.
+**CT-TUP-1 (Default).** `{ (x1 … xn) suchthat x1 in D1 and … }` becomes `Tuple(R1 … Rn)` (exact if each `Ri` is exact). Where the language needs field names, components are named `Item0 … ItemN-1`.
 
 **CT-TUP-2 (Invariant). No flattening.** A nested tuple `((x), (y))` is a `Tuple` whose components are 1-tuples. A 1-tuple `(x)` is `Tuple(R)` and never `R`.
 
-**CT-TUP-3 (Invariant).** The unit domain `{()}` becomes a unit-like `Tuple()`, which projects to `[]` in JSON. `()` is conceptually `{}` (VM-AX-5), so in a domain that admits both an empty tuple and an empty record or collection, the wire projection must tell them apart or report `CT-D-WIRE-AMBIGUOUS`.
+**CT-TUP-3 (Invariant).** The unit domain `{()}` becomes a unit-like `Tuple()`. `()` is conceptually `{}` (VM-AX-5), so in a domain that admits both an empty tuple and an empty record or collection, the wire projection must tell them apart or report `CT-D-WIRE-AMBIGUOUS`.
 
 **Example:** [`examples/05-tuple.sets`](../examples/05-tuple.sets)
 
@@ -295,7 +295,7 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 
 **CT-COL-1 (Invariant).** `Seq(T)` becomes `List(R(T))` (exact). The adapter recognizes `Seq` by its `base` binding and never generates nested pairs.
 
-**CT-COL-2 (Default).** `SetOf(T)` becomes `Set(R(T))` when `R(T)` is hashable or comparable in the target (exact). Otherwise it's `Checked(List(R(T)), no duplicates)` (over + check). The wire form follows the wire model; in JSON it's a sorted array (VM-JSON-1).
+**CT-COL-2 (Default).** `SetOf(T)` becomes `Set(R(T))` when `R(T)` is hashable or comparable in the target (exact). Otherwise it's `Checked(List(R(T)), no duplicates)` (over + check).
 
 **CT-COL-3 (Default).** `Map(K, V)` becomes `Dict(R(K), R(V))` when `R(K)` can be a native key (exact). Otherwise it's `Checked(List(Tuple(R(K), R(V))), unique keys)` (over + check).
 

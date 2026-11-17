@@ -15,11 +15,11 @@ Aged = { r suchthat r in Record and ("age", age) in r and age in Real }
 Human = union(Person, Aged)
 
 // Human
-//   member (Person only):  {("name", "abc")}                    JSON {"name":"abc"}
-//   member (Aged only):    {("age", 123)}                       JSON {"age":123}
-//   member (both):         {("age", 123), ("name", "abc")}      JSON {"name":"abc","age":123}
+//   member (Person only):  {("name", "abc")}
+//   member (Aged only):    {("age", 123)}
+//   member (both):         {("age", 123), ("name", "abc")}
 //   member (Person only):  {("age", "x"), ("name", "abc")}      open Person allows any age; "x" is kept in rest
-//   non-member:            {}                                   JSON {}
+//   non-member:            {}
 //   non-member:            {("age", "x")}                       neither name nor a Real age
 // Target: Record(age: Presence(Real), name: Presence(String); rest) + check (CT-UNI-4).
 //   After decoding the "both" member, IsPerson() and IsAged() are both true.

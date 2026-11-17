@@ -5,7 +5,7 @@
 - **Status:** draft
 - **Used by:** [core source standard](source/STANDARD.md), [core target standard](target/STANDARD.md), and every language standard
 
-`.sets` describes domains of values, but `GUIDE.md` doesn't yet say what a string, a record or a list *is* as a value. Without that agreement, a source adapter and a target adapter can read the same `.sets` text differently. This document fixes the values that both directions share. With [JSON-MODEL.md](JSON-MODEL.md) for the default wire, it is all a target adapter needs to understand a source adapter's output.
+`.sets` describes domains of values, but `GUIDE.md` doesn't yet say what a string, a record or a list *is* as a value. Without that agreement, a source adapter and a target adapter can read the same `.sets` text differently. This document fixes the values that both directions share. With the view domain a file imports (core source standard, CS-SCOPE-1), it is all a target adapter needs to understand a source adapter's output.
 
 Rules are tagged **Invariant** (a language standard can't override them) or **Default** (a language standard can override them in its Overrides table; see [standards/README.md](../README.md)).
 
@@ -445,16 +445,16 @@ Built values compare by structure:
 
 ## 8. Wire projections
 
-**VM-WIRE-1 (Invariant). A projection is one-to-one or it says so.** A wire projection maps values to a wire format and back. It is one-to-one on each domain and rejects non-members. Where a domain admits two values with the same projection, that is a diagnostic, not a guess. The default projection is JSON, specified in [JSON-MODEL.md](JSON-MODEL.md) (VM-JSON-1, VM-JSON-2). A language standard that uses another wire defines its own projection under this rule.
+**VM-WIRE-1 (Invariant). A projection is one-to-one or it says so.** A wire projection maps values to a wire format and back. It is one-to-one on each domain and rejects non-members. Where a domain admits two values with the same projection, that is a diagnostic, not a guess. Each language standard defines its projection under this rule.
 
 ## 9. Value notation for test vectors
 
-Examples and test vectors write values in `.sets` value notation (§1–§6), and add the JSON projection when it helps. For example:
+Examples and test vectors write values in `.sets` value notation (§1–§6). For example:
 
 ```text
-member:      {("name", "abc")}                   JSON {"name":"abc"}
-member:      {("name", "abc"), ("nick", "a")}    JSON {"name":"abc","nick":"a"}   (open record: extra key)
-non-member:  {("name", 1)}                       JSON {"name":1}
+member:      {("name", "abc")}
+member:      {("name", "abc"), ("nick", "a")}    (open record: extra key)
+non-member:  {("name", 1)}
 ```
 
 ## 10. Spec Issues

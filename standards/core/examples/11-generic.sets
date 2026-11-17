@@ -26,5 +26,5 @@ StrBox = Box(String)
 ItemPage = Page(Item)
 
 // StrBox    member: {("value", "a")}                              non-member: {("value", 1)}
-// ItemPage  member: {("items", ({("id", "1")}, ()))}              JSON {"items":[{"id":"1"}]}
+// ItemPage  member: {("items", ({("id", "1")}, ()))}
 // Target: Box[T any], Page[T Item]; or monomorphized BoxString / PageItem when generics are unavailable.

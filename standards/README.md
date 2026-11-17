@@ -22,8 +22,8 @@ standards/
 ├── README.md                  this file
 ├── core/                      the core standard; every language standard extends it
 │   ├── VALUE-MODEL.md         shared by both directions: values, lexical conventions, equality
-│   ├── JSON-MODEL.md          the default wire: the canonical JSON projection
 │   ├── base.sets              the `base` superdomain: operations, axioms and structural transformers
+│   ├── json.sets              the `json` superdomain: JSON's fixed domains, for views over JSON
 │   ├── source/STANDARD.md     core source standard  (any language → .sets)
 │   ├── target/STANDARD.md     core target standard  (.sets → any language)
 │   └── examples/*.sets        canonical domains with member / non-member test vectors

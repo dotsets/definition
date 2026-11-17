@@ -14,6 +14,6 @@ Tree = {
     ("label", label) in r and label in String
 }
 
-// member:      {("children", ()), ("label", "leaf")}                                    JSON {"children":[],"label":"leaf"}
+// member:      {("children", ()), ("label", "leaf")}
 // member:      {("children", ({("children", ()), ("label", "b")}, ())), ("label", "a")}
 // non-member:  {("label", "a")} (children is required); any infinite value

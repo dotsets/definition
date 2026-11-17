@@ -19,9 +19,9 @@ Profile = {
     r in OnlyKeys({"avatar", "bio", "nick"})
 }
 
-// member:      {("avatar", Nothing)}                                    JSON {"avatar":null}
-// member:      {("avatar", "a.png"), ("bio", "hi"), ("nick", Nothing)}  JSON {"avatar":"a.png","bio":"hi","nick":null}
-// member:      {("avatar", Nothing), ("nick", "x")}                     JSON {"avatar":null,"nick":"x"}
-// non-member:  {}                                                       JSON {} : avatar is nullable, not optional
-// non-member:  {("avatar", Nothing), ("bio", Nothing)}                  JSON {"avatar":null,"bio":null} : bio is optional, not nullable
+// member:      {("avatar", Nothing)}
+// member:      {("avatar", "a.png"), ("bio", "hi"), ("nick", Nothing)}
+// member:      {("avatar", Nothing), ("nick", "x")}
+// non-member:  {}                                                       avatar is nullable, not optional
+// non-member:  {("avatar", Nothing), ("bio", Nothing)}                  bio is optional, not nullable
 // Round trip must keep nick's three states apart: missing, null, "x" (CT-OPT-3).

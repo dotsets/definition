@@ -39,9 +39,29 @@ Rule IDs are `CS-*`. **Invariant** rules can't be overridden; **Default** rules 
 
 ## 1. Scope
 
-**CS-SCOPE-1 (Invariant). Every language standard declares its view.** The view is the set of values the standard's domains describe: "TypeScript as JSON over the wire", "Go values as `encoding/json` decodes them", "Python runtime objects". The same type can denote different domains in different views, so a standard without a declared view isn't usable.
+**CS-SCOPE-1 (Invariant). Every language standard declares its view.** The view is the set of values the standard's domains describe. The same type can denote different domains in different views: a TypeScript `number` is `Binary64Finite` as JSON on the wire, and `Float64` in the running program. The standard declares its view in two parts:
+1. A **View** field in its header, stating what is observed (a wire format and its codec, such as `encoding/json` or `JSON.parse`, or the runtime) and which distinctions the view keeps or loses where they matter to the mapping (for example, whether it tells `1` from `1.0`, or a missing field from `null`).
+2. A **view domain** that holds every value of the view. When the view is a wire format, the view domain belongs to that wire's superdomain, so every language with the same wire shares it (`JsonValue in json`). Otherwise, the standard declares it in `<language>.sets`.
 
-**CS-SCOPE-2 (Default). The core view is data.** Unless a language standard says otherwise, the view is serializable data: the values of the [Core Value Model](../VALUE-MODEL.md), carried by the canonical JSON projection ([JSON-MODEL.md](../JSON-MODEL.md), VM-JSON-1). Behavior (functions, channels, promises) and identity (pointers as addresses) are out of scope (§5.15).
+Every domain the standard emits is a subdomain of the view domain, and a type that admits every value in the view maps to it (CS-TOP-1). A test vector outside the view domain is a defect in the standard.
+
+Every emitted file imports its view domain. That's how a target standard learns the wire to generate codecs for, without learning the source language.
+
+For example:
+
+```text
+View: TypeScript values as JSON.stringify writes them and JSON.parse reads them.
+  Domain: JsonValue (json.sets, the json superdomain)
+  Keeps:  a missing key vs "k": null.
+  Loses:  1 vs 1.0 (one number type); undefined vs missing (undefined fields
+          aren't written); NaN and infinities (written as null).
+```
+
+Under this view, `number` maps to `Binary64Finite`, `x?: T` to `OptionalField("x", T)`, `x: T | null` to `union(T, {Nothing})`, and `unknown` to `JsonValue`.
+
+Every mapping in the standard is relative to this view. A view is always a view of values: identity and cycles aren't values (VM-RECUR-1), so even a runtime view narrows to values.
+
+**CS-SCOPE-2 (Default). The core view is data.** Unless a language standard says otherwise, the view is serializable data: the values of the [Core Value Model](../VALUE-MODEL.md). Behavior (functions, channels, promises) and identity (pointers as addresses) are out of scope (§5.15).
 
 ## 2. Conventions
 
@@ -137,7 +157,7 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 
 **Edge cases.** A literal that spells a domain name in scope becomes `"Number"` as a string or `\Number` as an atom (VM-LEX-4). The empty roster is `Phi`, not `{}` (CS-TOP-2).
 
-**Rationale.** Writing enumerations as quoted strings by default would merge atoms and strings, and the wire projection would then fail to detect the ambiguity (VM-WIRE-1; VM-JSON-2 in [JSON-MODEL.md](../JSON-MODEL.md)).
+**Rationale.** Writing enumerations as quoted strings by default would merge atoms and strings, a distinction the language keeps (VM-PRES-1).
 
 **Example:** [`examples/02-rosters.sets`](../examples/02-rosters.sets)
 
@@ -232,7 +252,7 @@ Human = union(Person, Aged)
 
 ### 5.9 Top and bottom
 
-**CS-TOP-1 (Invariant).** A type that admits every value in the view (`unknown`, `any`, `interface{}`, `object`) maps to `U` only if the view really admits every value. Otherwise it maps to the union of what the view admits. A JSON view admits `union(String, union(Real, union(Boolean, union({Nothing}, union(Seq(U), Record)))))`; the language standard defines this as a named domain such as `JsonValue`.
+**CS-TOP-1 (Invariant).** A type that admits every value in the view (`unknown`, `any`, `interface{}`, `object`) maps to `U` only if the view really admits every value. Otherwise it maps to the union of what the view admits. A JSON view admits `JsonValue` ([`json.sets`](../json.sets)).
 
 **CS-TOP-2 (Invariant).** A type with no values (`never`, `!`, Scala's `Nothing`) maps to `Phi`. It isn't the core value `Nothing` (VM-AX-5).
 

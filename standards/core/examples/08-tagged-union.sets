@@ -27,5 +27,5 @@ Key = {
 }
 Event = union(Click, Key)              // disjoint: both require "kind" with disjoint values (CT-DISJ-1 rule 4)
 
-// Event  member: {("kind", "click"), ("x", 3)}          JSON {"kind":"click","x":3}
+// Event  member: {("kind", "click"), ("x", 3)}
 //        non-member: {("kind", "key"), ("x", 3)}        Key requires "code"; Click requires kind "click"

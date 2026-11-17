@@ -31,7 +31,6 @@ Point = {
 
 // User
 //   member:      {("age", 30), ("home_address", {("city", "Pune")}), ("name", "abc")}
-//                JSON {"age":30,"home_address":{"city":"Pune"},"name":"abc"}
 //   member:      ... plus ("nick", "a")                              open: extra fields are allowed and must round-trip
 //   non-member:  {("age", 30), ("name", "abc")}                       missing required field
 //   non-member:  {("age", 30), ("city", "Pune"), ("name", "abc")}     flattened: Address stays nested
