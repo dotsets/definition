@@ -1,0 +1,207 @@
+// prelude.sets
+//
+// The domains that this folder uses beyond base. Read it with the value model.
+//
+// The domains in this folder describe data as a program holds it. They do not
+// describe a serialized form, and none is implied.
+//
+// From base, as the value model describes them: U, union, intersect, String,
+// Integer, Fractional, Boolean, Nothing, Float64, Seq, SetOf, Map, and the
+// atom NotANumber. Float64 also brings the atoms PositiveInfinity,
+// NegativeInfinity and NegativeZero. Everything else used here is declared here.
+//
+// Two domains here are described subdomains, Finite and NumericKey. Each has
+// its exact members in the "Extent:" comment above it. They overlap other
+// domains as their extents say.
+//
+// This folder was written without reading base itself. If base already
+// declares one of the names below, that is a clash to resolve, not a second
+// meaning.
+
+
+// ---------------------------------------------------------------------------
+// 1. Numbers
+// ---------------------------------------------------------------------------
+
+// A Fractional with no fractional part: 1.0, -2.0, 0.0.
+// n is local to the rule, so the rule reads: some Integer n is equal in size
+// to x. 1.0 is a member, 1 is not (it is an Integer), 1.5 is not.
+WholeFractional = { x suchthat x in Fractional and n in Integer and x >= n and x <= n }
+
+// The numbers of the 64-bit binary floating-point format, each written in
+// exactly one way.
+//
+// Float64 holds a small whole number in two forms, 2 and 2.0. Double keeps one:
+//   a whole number is in Integer form       0   1   -7   1000000000000000000000
+//   any other finite number is Fractional   0.5   -2.25
+//   the four special values are atoms       NotANumber   PositiveInfinity
+//                                           NegativeInfinity   NegativeZero
+// So 1 is a member and 1.0 is not, 0 is a member and 0.0 is not, and one
+// stored number is always one value. Whoever writes a stored number as a
+// member of Double writes a whole number without a decimal point.
+//
+// A member is an exact number, so its spelling can be long. The stored number
+// nearest to one tenth is
+//   0.1000000000000000055511151231257827021181583404541015625
+// and that is a member. 0.1 is not: no stored number equals it.
+//
+// The Integer form is a spelling, not a kind. A domain declared as Double
+// holds fractions too, and the source had no separate whole-number kind for
+// it. Only a roster of whole numbers, such as {0, 1, 2}, is known to hold
+// whole numbers only.
+Double = { x suchthat x in Float64 and x not in WholeFractional }
+
+
+// ---------------------------------------------------------------------------
+// 2. A second kind of nothing
+// ---------------------------------------------------------------------------
+
+// base has one nothing, Nothing: a value that is there and is deliberately
+// empty. unset is another kind: what a slot holds when it was never given a
+// value. unset is an ordinary atom. It is not a member of Phi, it is equal
+// only to itself, and it is not Nothing.
+//
+// So a field can lack a usable value in three ways, and they are three
+// different records:
+//   {("name", "a")}                     no tuple: the field is missing
+//   {("name", "a"), ("age", unset)}     the field is there and holds unset
+//   {("name", "a"), ("age", Nothing)}   the field is there and holds Nothing
+// A domain says which of the three it admits:
+//   r in OptionalField(k, V)   admits the missing field
+//   Unset inside V             admits unset
+//   {Nothing} inside V         admits Nothing
+//
+// unset is a kind of absence, not a piece of data. A target may hold it the
+// way it holds absence, as long as the states that one domain admits stay
+// distinct.
+Unset = {unset}
+
+
+// ---------------------------------------------------------------------------
+// 3. An instant
+// ---------------------------------------------------------------------------
+
+// A point in time: a whole number of milliseconds counted from
+// 1970-01-01T00:00:00 UTC, with every day taken as 86400000 milliseconds.
+// Negative numbers are instants before that moment. The range is one hundred
+// million days either side of it. NotANumber is the one invalid instant.
+// Every member is also a Double.
+EpochMillis = union({ x suchthat x in Integer and x >= -8640000000000000 and x <= 8640000000000000 }, {NotANumber})
+
+
+// ---------------------------------------------------------------------------
+// 4. Finite sets, maps and records
+// ---------------------------------------------------------------------------
+
+// Extent: a value is a member exactly when it is a domain and it has finitely
+// many members, so that counting them comes to an end.
+//   members:      {}   {1, 2}   {("a", 1)}   {{}}
+//   not members:  Integer   String   Seq(Integer)     their members never run out
+//                 1   "a"   (1, 2)   unset   Nothing  they are not domains
+// () is a member, because () and {} are treated as one value.
+// The SetOf and Map of base also hold endless domains. Every set, map and
+// record in this folder is finite, and says so through Finite.
+Finite sub U
+
+// A finite set of members of T. {} is the empty set.
+FiniteSet({T sub U}): intersect(SetOf(T), Finite)
+
+// A finite map: (key, value) pairs with unique keys, every key in K and every
+// value in V. {} is the empty map.
+//
+// Used on its own, as in X = FiniteMap(K, V), it is a table: the keys are
+// data, and a member can have any number of them.
+// Used as the first clause of a record builder, r in FiniteMap(String, V), it
+// says that every field of the record, named or not, has a value in V.
+FiniteMap({K sub U}, {V sub U}): intersect(Map(K, V), Finite)
+
+// A finite record whose keys are all Strings. Its values can be anything.
+//
+// Every member is a Record. In this folder, r in Object stands where the value
+// model writes r in Record as the first clause of a record builder. A builder
+// that starts this way names its fields: those keys are structure, not data.
+//
+// No record in this folder is closed, and none uses OnlyKeys. A member may
+// carry keys that its domain does not name, with any value. The source permits
+// such keys and says nothing more about them. They are always Strings, because
+// the record is an Object.
+Object = FiniteMap(String, U)
+
+// Extent: a String t is a member exactly when t is the key text of some
+// member x of Double. Every member of Double has exactly one key text:
+//   NotANumber has "NaN", PositiveInfinity has "Infinity", and
+//   NegativeInfinity has "-Infinity".
+//   0 and NegativeZero both have "0".
+//   If x < 0, it is "-" followed by the key text of 0 - x.
+//   If x > 0, take the shortest run of decimal digits d1 d2 ... dk, with d1
+//   not 0, and the Integer n, for which x is the member of Double nearest to
+//   the number 0.d1d2...dk * 10 ^ n. Of two equally near members, the nearest
+//   is the one that is an even multiple of the difference between them. If
+//   several runs of that length qualify, take the run whose number is nearest
+//   to x, and of two equally near runs the one whose last digit is even.
+//   Then the key text is:
+//     if k <= n and n <= 21     the digits, then n - k zeros
+//     if 0 < n and n < k        the first n digits, ".", the other digits
+//     if -6 < n and n <= 0      "0.", then 0 - n zeros, then the digits
+//     otherwise                 d1, then "." and the other digits if k > 1,
+//                               then "e", then "+" if n > 21 or "-" if not,
+//                               then n - 1 in decimal digits, without a sign
+//   members:      "0"  "1"  "-7"  "1.5"  "0.001"  "1500"  "NaN"  "Infinity"
+//                 "1e+21"  "1.5e-7"  "9007199254740992"
+//   not members:  "-0"  "01"  "1.0"  "+1"  "1e21"  ".5"  " 1"  "x"  ""
+// A check can accept "NaN", "Infinity" and "-Infinity" first. For any other
+// t, it reads t as a decimal number, rounds it to the nearest member of
+// Double, writes that member's key text, and compares the result with t.
+//
+// These Strings are the keys under which a number is filed in a record. Two
+// different members of Double never share a key text, except 0 and
+// NegativeZero.
+NumericKey sub String
+
+
+// ---------------------------------------------------------------------------
+// 5. Broad domains
+// ---------------------------------------------------------------------------
+
+// Every structured value: a sequence, or a finite domain, which is a set, a
+// map or a record. What is inside it can be anything.
+// An EpochMillis is a number, so it is not a member.
+Composite = union(Seq(U), Finite)
+
+// Every value that is not a kind of nothing.
+// Integer is listed beside Double because the source also has whole numbers
+// of any size. The two share every whole number that Double can hold: such a
+// number is one value, whichever of the two it was drawn from.
+Something = union(String, union(Double, union(Integer, union(Boolean, Composite))))
+
+// Every value there is in this folder: something, Nothing, or unset.
+// Not members: any other atom, such as red; a tuple that is not a sequence,
+// such as (1) or (1, 2); and a Callable placeholder, which is not data.
+Anything = union(Something, union({Nothing}, Unset))
+
+
+// ---------------------------------------------------------------------------
+// 6. Things that only exist while a program runs
+// ---------------------------------------------------------------------------
+
+// A runtime domain, in the sense of the value model: not data. A target never
+// serializes a member and never checks one. It binds the domain to its own
+// kind of routine.
+//
+// Callable(P, R) stands for a routine that is called with a list of arguments
+// and gives back one value.
+//   P is the domain of the argument list: a sequence with one position for
+//     each argument. For a routine called with a String and then a Double it
+//     is { (a, (b, ())) suchthat a in String and b in Double }.
+//   R is the domain of what comes back. It is Unset for a routine that gives
+//     nothing back.
+//
+// The domain is a tag. Its one member, (callable, P, R), is a placeholder that
+// says nothing except which domain it is in. Where a record has a field in a
+// Callable domain, the field holds some routine, and the placeholder stands
+// for it. Two Callable domains are equal exactly when their P and their R are
+// equal.
+//
+// The name and the tag are this folder's own. If the reader's standards
+// already have a runtime domain for routines, it is the same idea.
+Callable({P sub U}, {R sub U}): {(callable, P, R)}
