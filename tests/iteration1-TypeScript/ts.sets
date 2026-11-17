@@ -1,0 +1,35 @@
+// TypeScript standard prelude (iteration 1, standard 0.2.0).
+// Assumes base is in scope (String, Integer, Fractional, Boolean, Nothing,
+// Float64, IEEESpecial, Record, Map, Seq, OptionalField, union, intersect).
+
+// --- New axioms (VM-AX-7): runtime handles no base domain contains.
+TsSymbol
+TsFunction
+
+// --- Absence. `null` is the core Nothing; `undefined` is a TS atom (TS-PRIM-1).
+TsUndefined = {undefined}
+
+// --- Numbers (TS-NUM-1). Every finite number is in Fractional form;
+// Integer is reserved for bigint.
+TsNumber = { x suchthat x in Float64 and x not in Integer }
+
+// --- Keys and records (TS-OBJ-1). Symbol keys are out of scope.
+TsKey = String
+TsRecord = Map(TsKey, U)
+
+// Strings that String(n) produces for some number n:
+// "0", "-1", "1.5", "1e+21", "NaN", "Infinity", "-Infinity".
+// (String(-0) is "0".)
+TsNumericKey sub String
+
+// --- Top types (TS-PRIM-1).
+TsPrimitive = union(String, union(TsNumber, union(Integer, union(Boolean, union(TsSymbol, union({Nothing}, TsUndefined))))))
+TsObject = { x suchthat x not in TsPrimitive }
+TsNonNullish = { x suchthat x not in {Nothing} and x not in TsUndefined }
+
+// --- Wrappers (TS-LIB-1). A Date is its time value: whole milliseconds
+// within +-8.64e15 (in Fractional form, since it's a number), or NaN.
+TsDate = union(
+    { x suchthat x in TsNumber and z in Integer and x >= z and x <= z and x >= -8640000000000000 and x <= 8640000000000000 },
+    {NotANumber}
+)

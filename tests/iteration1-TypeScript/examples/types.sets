@@ -1,0 +1,115 @@
+// Transpiled from types.ts by STANDARD.md 0.2.0 and VALUE-MODEL.md 0.2.0.
+// Assumes base and ../ts.sets are in scope. The value model has no import
+// syntax of its own (it mentions `X in file` without defining it), so the
+// import is left implicit. Block numbers match types.ts.
+
+// 1. Primitives and number literals (TS-PRIM-1, TS-NUM-1, TS-NUM-2)
+Id = String
+Count = TsNumber
+Big = Integer
+Pi = {3.140000000000000124344978758017532527446746826171875}
+Tenth = {0.1000000000000000055511151231257827021181583404541015625}
+One = {1.0}
+OneN = {1}
+
+// 2. Literal unions and enums (TS-LIT-1, TS-ENUM-1)
+Status = {"active", "suspended", "deleted"}
+Color = {"RED", "GREEN"}
+Level = {0.0, 1.0, 2.0}
+
+// 3. Interface (TS-OBJ-1..3). `readonly` is dropped.
+User = {
+    r suchthat
+    r in TsRecord and
+    ("id", id) in r and id in Id and
+    ("name", name) in r and name in String and
+    r in OptionalField("age", union(TsNumber, TsUndefined)) and
+    ("email", email) in r and email in union(String, {Nothing}) and
+    ("tags", tags) in r and tags in Seq(String) and
+    ("createdAt", createdAt) in r and createdAt in TsDate
+}
+
+// 4. Discriminated union (TS-UNION-1, VM-RULE-3 literal patterns)
+Shape = union(
+    { r suchthat r in TsRecord and ("kind", "circle") in r and ("radius", radius) in r and radius in TsNumber },
+    { r suchthat r in TsRecord and ("kind", "rect") in r and ("w", w) in r and w in TsNumber and ("h", h) in r and h in TsNumber }
+)
+
+// 5. Tuples (TS-TUP-1)
+Point = { (x, y) suchthat x in TsNumber and y in TsNumber }
+Span = union(
+    { (s) suchthat s in TsNumber },
+    { (s, e) suchthat s in TsNumber and e in union(TsNumber, TsUndefined) }
+)
+Args = { (head, rest) suchthat head in String and rest in Seq(TsNumber) }
+
+// 6. Index signatures (TS-OBJ-4)
+Dictionary = Map(String, TsNumber)
+ByIndex = Map(TsNumericKey, String)
+Headers = {
+    r suchthat
+    r in TsRecord and r in Map(String, String) and
+    ("contentType", contentType) in r and contentType in String
+}
+Flags = {
+    r suchthat
+    r in TsRecord and
+    ("read", read) in r and read in Boolean and
+    ("write", write) in r and write in Boolean
+}
+
+// 7. Generics (TS-GEN-1). The default `E = string` can't be expressed:
+// functions have no default parameters, and VM-NAME-1 forbids a second
+// one-parameter `Result`. Uses of `Result<T>` must emit `Result(T, String)`.
+Box({T sub U}): { r suchthat r in TsRecord and ("value", value) in r and value in T }
+
+Result({T sub U}, {E sub U}): union(
+    { r suchthat r in TsRecord and ("ok", true) in r and ("value", value) in r and value in T },
+    { r suchthat r in TsRecord and ("ok", false) in r and ("error", error) in r and error in E }
+)
+
+Page({T sub TsObject}): {
+    r suchthat
+    r in TsRecord and
+    ("items", items) in r and items in Seq(T) and
+    ("next", next) in r and next in union(String, {Nothing})
+}
+
+UserPage = Page(User)
+
+// 8. Recursion (TS-REC-1, VM-RECUR-1)
+Tree({T sub U}): {
+    r suchthat
+    r in TsRecord and
+    ("value", value) in r and value in T and
+    ("children", children) in r and children in Seq(Tree(T))
+}
+
+Json = union(String, union(TsNumber, union(Boolean, union({Nothing}, union(Seq(Json), Map(String, Json))))))
+
+// 9. Library wrappers (TS-LIB-1, VM-PRES-2)
+TagSet = Map(String, {()})
+Scores = Map(String, TsNumber)
+
+// 10. Intersection (TS-UNION-1)
+Timestamped = { r suchthat r in TsRecord and ("updatedAt", updatedAt) in r and updatedAt in TsDate }
+AuditedUser = intersect(User, Timestamped)
+
+// 11. Template literal (TS-TMPL-1, VM-SUB-2)
+// Exact members: every String whose first five characters are `user-`.
+UserKey sub String
+
+// 12. Class (TS-CLASS-1). `deposit` is a prototype method and is dropped.
+Account = {
+    r suchthat
+    r in TsRecord and
+    ("id", id) in r and id in String and
+    ("balance", balance) in r and balance in TsNumber and
+    ("onChange", onChange) in r and onChange in TsFunction
+}
+
+// 13. Collision probes
+Ambiguous = union(Point, Seq(TsNumber))                       // TS-WIRE-1 diagnostic
+EmptyThings = union(TsNonNullish, union({Nothing}, TsUndefined))  // works out to U, as in TS
+Nullish = union({Nothing}, union(TsUndefined, TsUndefined))
+SetOrDict = union(Map(String, {()}), Map(String, TsNonNullish))
