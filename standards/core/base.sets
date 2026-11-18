@@ -10,7 +10,6 @@
 
 // ---------------------------------------------------------------------
 // Universal and empty domains (GUIDE "universal domain", "phi").
-// `U` and `Phi` are the only spellings; there are no aliases (VM-LEX-5).
 // ---------------------------------------------------------------------
 
 U = { x suchthat x in {x} }

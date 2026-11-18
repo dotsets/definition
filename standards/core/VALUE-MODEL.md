@@ -122,8 +122,6 @@ An escaped separator isn't a separator. GUIDE's rule that ignores one whitespace
 
 `@` has no special meaning: `@Number` is an ordinary atom spelled `@Number`. Atoms are written without escapes whenever that's unambiguous.
 
-**VM-LEX-5. Universal and empty domain spelling.** The universal domain is `U` and the empty domain is `Phi`, both declared in `base`. There are no aliases: `u` and `phi` aren't defined, and a reference to either is an unknown domain unless the file declares it itself.
-
 **VM-NAME-1. Declared names can't be redeclared.** A domain or function that's already declared in scope can't be declared again. That covers names from `base`, names imported with `X in file`, and names declared earlier in the same file. Redeclaring `U`, `Phi`, `union` or `String`, for example, is an error. A file that wants a different meaning uses a different name.
 
 **VM-LEX-6. Escapes make new symbols.** A backslash can escape any character, in any symbol. The escaped character is taken literally, outside every rule it would otherwise follow, and the result is a new symbol in `U`:
@@ -450,7 +448,7 @@ Ambiguities and contradictions in `README.md` (`b52f182`) and `GUIDE.md` (`f5a56
 
 | # | Issue | Core assumption |
 | - | ----- | --------------- |
-| SI-18 | GUIDE's `base.sets` example lists only `u`, `phi` and the operations, and defines `U = u` and `Phi = phi` as aliases. `base` now also holds the axioms, described subdomains and structural transformers. | [`base.sets`](base.sets) is the full `base`, with `U` and `Phi` and no lowercase aliases (VM-LEX-5). GUIDE's example could point to it. |
+| SI-18 | GUIDE's `base.sets` example lists only `u`, `phi` and the operations, and defines `U = u` and `Phi = phi` as aliases. `base` now also holds the axioms, described subdomains and structural transformers. | [`base.sets`](base.sets) is the full `base`, with `U` and `Phi` and no lowercase aliases. GUIDE's example could point to it. |
 | SI-6 | GUIDE says function parameters must be domains, but `IsOne(x)` and `ToUser(x, y)` take bare parameters. | Core only uses `{X sub D}` and `{x suchthat …}` parameters. |
 | SI-7 | `=`, `sub or =`, `!=` (GUIDE) and `subsetof` (README `Human`) appear but aren't defined. | Not used. `%` is now defined by VM-AX-6. |
 | SI-8 | `base` shows a variadic `union({A sub u}, {B sub u}, ...)`; variadic parameters aren't defined. | Binary `union`/`intersect`; a chain nests them, and any nesting means the same (VM-EQ-2). |
@@ -474,7 +472,7 @@ Problems the core standards know about but don't solve yet. These are concerns o
 
 | # | Issue | Resolution |
 | - | ----- | ---------- |
-| SI-1 | The universal domain was spelled both `u` and `U`, and the empty domain both `phi` and `Phi`. | `U` and `Phi` only; the lowercase aliases are dropped (VM-LEX-5). |
+| SI-1 | The universal domain was spelled both `u` and `U`, and the empty domain both `phi` and `Phi`. | `U` and `Phi` only; `base.sets` drops the lowercase aliases. |
 | SI-2 | Record members were `{name, age}` in GUIDE and `(name)` in README. | Records are sets of `(key, value)` tuples: `{r suchthat ("name", n) in r and n in String}` (VM-REC-*). |
 | SI-3 | There was no shared axioms superdomain. | `core` is merged into `base`. |
 | SI-4 | Quoting was only a convention. | VM-LEX-2 to VM-LEX-4 are accepted for now; quoted strings are CS-STR-2. |
@@ -491,6 +489,6 @@ Decisions made in review that belong in `GUIDE.md`. The standards already rely o
 1. **Rule precedence and grouping** (VM-RULE-1, VM-RULE-1a). Rules follow boolean algebra: arithmetic, then comparisons and membership, then `not`, then `and`, then `or`, each level grouping left to right (except `^`). Parentheses after a name are a call, parentheses around a rule or arithmetic expression group it, and parentheses around values and binders are tuples, which can't contain arithmetic. GUIDE's "Tuples and Vectors" section should say that grouping parentheses aren't values.
 2. **Numeric operators** (VM-AX-6). `^ * / % + -` and `< <= > >=` on numbers, with exact mathematical meaning and no coercion; `^` takes integer exponents and groups right to left. This makes ranged and floating-point domains expressible (`Int32`, `Binary64Finite` as builders), which GUIDE's number discussion could show.
 3. **Rule-local binders** (VM-RULE-2, SI-17). A symbol that first appears inside a rule is existential over the rule.
-4. **Names** (VM-LEX-5, VM-NAME-1). `U` and `Phi` are the only spellings of the universal and empty domains; GUIDE's `u` and `phi` aliases go away. A declared domain or function can't be redeclared, which GUIDE's "Domain Validation" section could state.
+4. **Names** (VM-NAME-1). `U` and `Phi` are the only spellings of the universal and empty domains; GUIDE's `u` and `phi` aliases go away. A declared domain or function can't be redeclared, which GUIDE's "Domain Validation" section could state.
 5. **Nothing** (VM-AX-5). `Nothing in Phi` declares the one nothing, as a deliberate paradox. `Phi` is the empty domain, not nothing. `()` and `{}` are conceptually equal, not literally. GUIDE's "Tuples and Vectors" section could say so.
 6. **Escapes** (VM-LEX-0, VM-LEX-6). An escaped character makes a new symbol and isn't a separator. GUIDE's symbol definition could state the two parsing layers.
