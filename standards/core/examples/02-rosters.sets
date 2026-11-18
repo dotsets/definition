@@ -1,5 +1,5 @@
 // 02-rosters: literal types, enumerations, mixed rosters, escapes.
-// Rules: CS-LIT-1, CS-LIT-2, CS-ENUM-1, VM-LEX-*, CT-ROS-1, CT-ROS-2, CT-ROS-3
+// Rules: CS-LIT-1, CS-LIT-2, CS-ENUM-1, CT-ROS-1, CT-ROS-2, CT-ROS-3
 //
 // Abstract source:
 //   Status    = "Succeeded" | "Failed" | "Processing"     (string literals)

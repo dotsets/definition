@@ -6,10 +6,11 @@
 - **Depends on:** [Core Value Model](../VALUE-MODEL.md), [`base.sets`](../base.sets)
 - **Status:** draft
 
-Rule IDs are `CS-*`. **Invariant** rules can't be overridden; **Default** rules can be, through the language standard's Overrides table ([standards/README.md](../../README.md)).
+Rule IDs are `CS-*`. Rules moved here from the value model keep their `VM-*` IDs, and like every value-model rule they're invariants. **Invariant** rules can't be overridden; **Default** rules can be, through the language standard's Overrides table ([standards/README.md](../../README.md)).
 
 <!-- mtoc-start -->
 
+* [0. Principles](#0-principles)
 * [1. Scope](#1-scope)
 * [2. Conventions](#2-conventions)
 * [3. Axioms](#3-axioms)
@@ -31,11 +32,27 @@ Rule IDs are `CS-*`. **Invariant** rules can't be overridden; **Default** rules 
   * [5.14 Refinements](#514-refinements)
   * [5.15 Behavior](#515-behavior)
   * [5.16 Modules](#516-modules)
-* [6. Construct coverage](#6-construct-coverage)
-* [7. Open Gaps](#7-open-gaps)
-* [8. Spec Issues](#8-spec-issues)
+* [6. Structural encodings](#6-structural-encodings)
+  * [6.1 Records](#61-records)
+  * [6.2 Missing fields and null](#62-missing-fields-and-null)
+  * [6.3 Tuples](#63-tuples)
+  * [6.4 Sequences, sets and maps](#64-sequences-sets-and-maps)
+* [7. Value notation for test vectors](#7-value-notation-for-test-vectors)
+* [8. Construct coverage](#8-construct-coverage)
+* [9. Open Gaps](#9-open-gaps)
+* [10. Spec Issues](#10-spec-issues)
 
 <!-- mtoc-end -->
+
+## 0. Principles
+
+**VM-PRES-1. Preserve as much of the domain as the source states.** `.sets` exists to preserve how data is structured, how it's spread across values, and how it's viewed. A `.sets` description keeps every distinction its source makes, even one a likely target can't use: a distinction dropped on the way in can't be recovered on the way out.
+
+How much of the domain survives the IR is the measure of a translation's clarity and correctness. When two encodings are both valid, the one that keeps more of the domain is the better one.
+
+**VM-PRES-3. Runtime domains aren't data.** `.sets` describes data at rest. A type whose values exist only while a program runs (a promise, a function, a lock) isn't data, and its behavior isn't transpiled. It's a *runtime domain*: a tagged domain named by its concept, never by its source spelling. It only has to be unique and equal to itself. It says nothing about bytes, and it's never serialized or checked as data.
+
+The common concepts and their tags are registered in [RUNTIME.md](../RUNTIME.md). A JavaScript `Promise<string>` is `Async(String)`, never an atom or domain named `Promise`, so it can't collide with an unrelated type that another language happens to call `Promise`.
 
 ## 1. Scope
 
@@ -59,17 +76,17 @@ View: TypeScript values as JSON.stringify writes them and JSON.parse reads them.
 
 Under this view, `number` maps to `Binary64Finite`, `x?: T` to `OptionalField("x", T)`, `x: T | null` to `union(T, {Nothing})`, and `unknown` to `JsonValue`.
 
-Every mapping in the standard is relative to this view. A view is always a view of values: identity and cycles aren't values (VM-RECUR-1), so even a runtime view narrows to values.
+Every mapping in the standard is relative to this view. A view is always a view of values: identity and cycles aren't values (GUIDE, pending), so even a runtime view narrows to values.
 
 **CS-SCOPE-2 (Invariant). The core view.** The core view is the [Core Value Model](../VALUE-MODEL.md) itself: every core value, observed through no particular wire. Its view domain is `U`. The core examples use this view. A language standard may declare it as its own view (`View: core`), or declare another view under CS-SCOPE-1.
 
-Runtime-only types aren't values of any view. They map to their runtime concept (VM-PRES-3, [RUNTIME.md](../RUNTIME.md)) whatever the view, and the view-domain requirement of CS-SCOPE-1 doesn't apply to them. Identity (pointers as addresses) and cycles aren't values either (VM-RECUR-1).
+Runtime-only types aren't values of any view. They map to their runtime concept (VM-PRES-3, [RUNTIME.md](../RUNTIME.md)) whatever the view, and the view-domain requirement of CS-SCOPE-1 doesn't apply to them. Identity (pointers as addresses) and cycles aren't values either (GUIDE, pending).
 
 ## 2. Conventions
 
 **CS-CONV-1 (Invariant). Imports.** An emitted file imports every symbol it uses and its view domain (CS-SCOPE-1), and nothing else. A core-view file imports `U in base`; a JSON-view file imports `JsonValue in json`, whether or not a declaration uses it. Every domain a file references is declared in it, written inline, or imported; no symbol is built in, `U` included (GUIDE, "Domain Validation").
 
-**CS-CONV-3 (Default). Domain names.** A named source type becomes a domain of the same name. A character that can't appear bare in a symbol, such as a separator (`,`, `{`, `}`), is escaped (VM-LEX-6); the escaped symbol is still that domain's name (VM-LEX-4). When the name is already taken:
+**CS-CONV-3 (Default). Domain names.** A named source type becomes a domain of the same name. A character that can't appear bare in a symbol, such as a separator (`,`, `{`, `}`), is escaped (GUIDE, pending); the escaped symbol is still that domain's name (GUIDE, pending). When the name is already taken:
 - If the source type has the same structure as the domain in scope, it is that domain and nothing new is declared (VM-PRES-2). JavaScript's `String` is `String` from `base`.
 - Otherwise the language standard renames it. That covers a name already in scope (a `base` name, an imported name such as `Async` from `runtime`, an earlier declaration) and two source types in one module that would get the same name.
 
@@ -79,7 +96,7 @@ Runtime-only types aren't values of any view. They map to their runtime concept 
 
 ## 3. Axioms
 
-**CS-AX-1 (Invariant). Reuse `base`; new axioms only for new values.** Scalars map to `base` axioms and described subdomains whenever the prose meaning matches (VALUE-MODEL §5; CS-STR-1; number axioms, pending). Values that exist in `base` (dates, UUIDs, decimals) are described subdomains of `base` domains, because a new axiom would be disjoint from them (GUIDE, "Top domain axiom"). A language standard declares a new top-level axiom only for values no `base` domain contains. Runtime-only types aren't values and never become axioms (VM-PRES-3).
+**CS-AX-1 (Invariant). Reuse `base`; new axioms only for new values.** Scalars map to `base` axioms and described subdomains whenever the prose meaning matches (VALUE-MODEL §4; CS-STR-1; number axioms, pending). Values that exist in `base` (dates, UUIDs, decimals) are described subdomains of `base` domains, because a new axiom would be disjoint from them (GUIDE, "Top domain axiom"). A language standard declares a new top-level axiom only for values no `base` domain contains. Runtime-only types aren't values and never become axioms (VM-PRES-3).
 
 **CS-AX-2 (Invariant). Disjointness check.** Before declaring an axiom, the language standard shows that no value of the new axiom is a value of an existing axiom. If two of the language's types share values (`int` and `float` both hold `1`), they're described subdomains of one axiom, or unions of axioms, never two axioms.
 
@@ -87,7 +104,7 @@ Runtime-only types aren't values of any view. They map to their runtime concept 
 
 **CS-STR-1 (Invariant). String.** The `base` axiom `String` is every finite sequence of Unicode scalar values (U+0000–U+D7FF, U+E000–U+10FFFF), including the empty string. Surrogate code points aren't string content.
 
-**CS-STR-2 (Invariant). Quoted atoms are strings.** An atom (VM-LEX-3) that starts and ends with an unescaped `"` encodes a member of `String`: the characters between the quotes, with escapes decoded (VM-LEX-6). `"Succeeded"` encodes the string `Succeeded`, and `""` the empty string. No other atom is a `String`, so `Succeeded` isn't one.
+**CS-STR-2 (Invariant). Quoted atoms are strings.** An atom (GUIDE, pending) that starts and ends with an unescaped `"` encodes a member of `String`: the characters between the quotes, with escapes decoded (GUIDE, pending). `"Succeeded"` encodes the string `Succeeded`, and `""` the empty string. No other atom is a `String`, so `Succeeded` isn't one.
 
 Inside a symbol, every unescaped `"` must be closed by another one:
 - `"a\"b"` is the string `a"b`.
@@ -102,6 +119,18 @@ Separators are escaped the same way, inside quotes or not, because the grammar l
 
 **CS-AX-4 (Default). Described subdomains.** A language standard writes further ranged domains as builders (VM-SUB-0), and declares the remaining described subdomains in its superdomain (CS-AX-3) with the `sub` form (`Uuid sub String`, `Rfc3339Timestamp sub String`). Each one needs a prose extent precise enough to write a membership check from. The language standard owns them the way `base` owns its own (VM-SUB-1): it states how they overlap, and prose that contradicts a subdomain's `sub` parent is a defect in that standard. How it describes a domain (prose, builder or structured value, VM-SUB-3) is its own choice.
 
+**VM-SUB-3. Structured values aren't subdomains.** A value whose representation carries information the number alone doesn't is a structured value, not a subdomain of `Real`. A decimal that keeps its scale is the usual case: decimal128 stores `1.50` as coefficient `150` and exponent `-2`, and `1.5` as `15` and `-1`. They're equal numbers but different values (`1.50 * 2` is `3.00`). Since `1.50` and `1.5` are the same `Fractional` (VM-LEX-2), `Decimal128 sub Real` would lose the scale (VM-PRES-1). Keeping it takes a tuple:
+
+```sets
+Decimal128 = {
+    (c, q) suchthat
+    c in Integer and c > 0 - 10 ^ 34 and c < 10 ^ 34 and
+    q in Integer and q >= -6176 and q <= 6111
+}
+```
+
+Here `1.50` is `(150, -2)` and `1.5` is `(15, -1)`, two members. Special values (NaN, infinities, negative zero) are added with `union`, as `Float64` does.
+
 ## 4. Decisions
 
 | Question | Decision | Rule |
@@ -112,7 +141,7 @@ Separators are escaped the same way, inside quotes or not, because the grammar l
 | Open vs closed | Records are open by default. Closed records add `r in OnlyKeys({…})`. | VM-REC-3, VM-REC-4, CS-REC-4 |
 | Nominal vs structural | Structural. A name is a label for a domain. Brands that exist in the value are tags. | CS-NOM-* |
 | Generics | Transformers with domain parameters; a bound `T extends X` becomes `{T sub X}`. | CS-GEN-* |
-| Recursion | Self-reference by name. | VM-RECUR-1, CS-RECUR-1 |
+| Recursion | Self-reference by name. | GUIDE (pending), CS-RECUR-1 |
 | Variable-length collections | `Seq`, `SetOf` and `Map` from `base`. | CS-COL-* |
 | Modules | One superdomain file per module; imports become `X in module`. | CS-MOD-* |
 | Wrapper types | Mapped to the structure they wrap. | VM-PRES-2, CS-WRAP-1 |
@@ -160,7 +189,7 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 
 **CS-NUM-3 (Default).** A numeric literal is written in a notation that spells its value exactly, in the same form (VM-LEX-2). Every binary64 value has an exact hexadecimal float, and an exact decimal.
 
-**Edge cases.** A literal that spells a domain name in scope becomes `"Number"` as a string or `\Number` as an atom (VM-LEX-4). The empty roster is `Phi`, not `{}` (CS-TOP-2).
+**Edge cases.** A literal that spells a domain name in scope becomes `"Number"` as a string or `\Number` as an atom (GUIDE, pending). The empty roster is `Phi`, not `{}` (CS-TOP-2).
 
 **Rationale.** Writing enumerations as quoted strings by default would turn values that aren't strings into strings, a distinction the language keeps (VM-PRES-1).
 
@@ -265,7 +294,7 @@ Human = union(Person, Aged)
 
 **CS-COL-1 (Invariant).** Variable-length list, array, slice → `Seq(T)`. Set → `SetOf(T)`, or a record of keys with `()` values when the language standard reads its set type that way (VM-SET-1, VM-PRES-2). Map or dictionary → `Map(K, V)`. Index signature `{[k: string]: V}` → `Map(String, V)`. A language's set and map types are finite, and the language standard narrows `SetOf(T)` and `Map(K, V)` to that.
 
-**CS-COL-2 (Invariant).** A record with fixed fields plus an index signature for the rest is the intersection of the record and a constraint on its other fields. That's expressible only when the fixed fields' values are also in `V`: `intersect(Fixed, Map(String, V))`. Otherwise it's a gap (§7, G-3); the adapter emits the open record `Fixed` with a `// CS-D-GAP index-signature` comment, and reports a diagnostic.
+**CS-COL-2 (Invariant).** A record with fixed fields plus an index signature for the rest is the intersection of the record and a constraint on its other fields. That's expressible only when the fixed fields' values are also in `V`: `intersect(Fixed, Map(String, V))`. Otherwise it's a gap (§9, G-3); the adapter emits the open record `Fixed` with a `// CS-D-GAP index-signature` comment, and reports a diagnostic.
 
 **Example:** [`examples/10-collections.sets`](../examples/10-collections.sets)
 
@@ -295,7 +324,7 @@ Box({T sub U}): { r suchthat r in Record and ("value", value) in r and value in 
 
 ### 5.13 Recursion
 
-**CS-RECUR-1 (Invariant).** A self-referential or mutually recursive type refers to the domain by name (VM-RECUR-1):
+**CS-RECUR-1 (Invariant).** A self-referential or mutually recursive type refers to the domain by name (GUIDE, pending):
 
 ```sets
 Tree = {
@@ -306,7 +335,7 @@ Tree = {
 }
 ```
 
-Cyclic data isn't a value (VM-RECUR-1); a language standard that keeps it encodes the references as data, such as ids or paths.
+Cyclic data isn't a value (GUIDE, pending); a language standard that keeps it encodes the references as data, such as ids or paths.
 
 **Example:** [`examples/12-recursion.sets`](../examples/12-recursion.sets)
 
@@ -332,7 +361,108 @@ NonEmptyString = difference(String, {""})
 
 **CS-MOD-2 (Invariant).** An import of type `X` from module `m` is `X in m`. Re-exports are `X in m` in the re-exporting file. Visibility (exported versus private) isn't domain information; every type referenced by an exported type is emitted.
 
-## 6. Construct coverage
+## 6. Structural encodings
+
+### 6.1 Records
+
+**VM-REC-1. A record value is a set of tuples.** Each member is a field `(key, value)`. A key can be any value, and keys are unique within a record. The record with no fields is `{}`, a set with no tuples. It's the empty domain `Phi`, not a missing value, which is `Nothing` (VM-AX-5). The domain of all records in `base` is:
+
+```sets
+Record = Map(U, U)
+```
+
+```text
+{ name: "abc", age: 123 }   is the value   {("name", "abc"), ("age", 123)}
+{ 1: "abc" }                is the value   {(1, "abc")}
+{ }                         is the value   {}
+```
+
+`{}` is also the empty set, the empty map and, in context, `[]` (VM-AX-5). With nothing inside, there's no field, element or member to tell them apart, so the collision is allowed (VM-PRES-2).
+
+Field names are part of the value, because `{"name": 1}` and `{"nom": 1}` are different data on wires that name fields. A positional tuple `(name, age)` can't keep that difference without relying on binder names, and binder names are scoped symbols that renaming must not affect.
+
+**VM-REC-2. Record builders.** A record domain is written as a builder over a record binder `r`, with each required field as a pattern on `r`:
+
+```sets
+Person = { r suchthat r in Record and ("name", name) in r and name in String }
+```
+
+`r in Record` is what makes the members records. Without it, `{("name", "a"), ("name", 1)}` would be a `Person` even though its keys repeat, so it isn't a record (VM-REC-1). So would `{("name", "a"), 5}`.
+
+Other text can describe the same domain, and it's still the same domain: a domain is its members, not its spelling.
+
+**VM-REC-3. Records are open.** A record domain admits fields it doesn't mention, with any value. This follows from the builder: a rule constrains only the fields it names, so the same `.sets` text means the same domain to every adapter. A closed source type (a Go struct, a sealed class) says so with `OnlyKeys` (VM-REC-4).
+
+```sets
+Person = { r suchthat r in Record and ("name", name) in r and name in String }
+Aged = { r suchthat r in Record and ("age", age) in r and age in Integer }
+Human = union(Person, Aged)
+```
+
+`{("age", 123), ("name", "abc")}` is a `Person`. This is the README `Human` reading: that value is both a `Person` and an `Aged`, so it's a `Human`.
+
+**VM-REC-4. Closed records say so.** A record domain that rejects unmentioned keys adds `r in OnlyKeys({k1, …, kn})`, listing every key it admits: its required keys and its optional keys (VM-MISS-2).
+
+```sets
+ClosedPerson = { r suchthat r in Record and ("name", name) in r and name in String and r in OptionalField("age", Integer) and r in OnlyKeys({"name", "age"}) }
+```
+
+`{("name", "abc")}` and `{("name", "abc"), ("age", 1)}` are `ClosedPerson`s; `{("name", "abc"), ("id", 1)}` isn't, because `"id"` isn't listed.
+
+### 6.2 Missing fields and null
+
+**VM-MISS-1. A missing field is a missing tuple.** Absence isn't a value: a missing field has no tuple at all. A field that's present with nothing in it is a tuple whose value is `Nothing` (VM-AX-5). These are different records:
+
+```text
+{name: "abc"}               is   {("name", "abc")}
+{name: "abc", age: null}    is   {("name", "abc"), ("age", Nothing)}
+```
+
+Kinds of absence in between, such as JavaScript's `undefined`, are ordinary values; `.sets` gives them no special meaning.
+
+**VM-MISS-2. Optional fields.** `r in OptionalFields(K, V)` says: every field of `r` whose key is in `K`, if present, has a value in `V`. `K` is a domain of keys, so one call can make several fields optional with the same value domain. `OptionalField(k, V)` is the single-key helper, `OptionalFields({k}, V)`. In `base`:
+
+```sets
+OptionalFields({K sub U}, {V sub U}): {
+    r suchthat
+    r in Record and
+    r not in { s suchthat (k, v) in s and k in K and v not in V }
+}
+
+OptionalField({k suchthat k in U}, {V sub U}): OptionalFields({k}, V)
+```
+
+```sets
+Person = { r suchthat r in Record and ("name", name) in r and name in String and r in OptionalField("age", Integer) }
+```
+
+`{("name", "a")}` and `{("name", "a"), ("age", 1)}` are `Person`s. `{("name", "a"), ("age", "x")}` isn't, and nor is `{("name", "a"), ("age", Nothing)}`, because `Nothing` isn't in `Integer`. A field that may also be null uses `union(Integer, {Nothing})` (VM-AX-5).
+
+A field that's neither required nor optional in an open record can hold anything (VM-REC-3).
+
+### 6.3 Tuples
+
+**VM-TUP-1. Tuples are ordered.** An n-tuple `(v1, …, vn)` is ordered and nests without flattening (GUIDE, "Tuples and Vectors"). A tuple with at least one component is its own kind of value (VM-KIND-1), never a record or another domain; the empty tuple `()` is treated as `{}` in the core context (VM-AX-5). Sequences are built from tuples (VM-SEQ-1), so a nested pair ending in `()`, such as `(a, (b, ()))`, is also a sequence.
+
+### 6.4 Sequences, sets and maps
+
+**VM-SEQ-1. Sequences are nested pairs.** A finite sequence is a nested pair ending in the empty tuple: `[]` is `()`, and `[a, b]` is `(a, (b, ()))`. `Seq(T)` is the domain of finite sequences over `T`. Because `()` is treated as `{}` (VM-AX-5), `[]` collides with the empty record, set and map; that collision is allowed (VM-REC-1).
+
+**VM-SET-1. Sets are domains.** A set of values is a domain, so `{"a", "b"}` is the set of `"a"` and `"b"`. `SetOf(T)` is the domain of all subdomains of `T` (`s sub T`).
+
+**VM-MAP-1. Maps are domains of pairs.** A map is a domain of `(key, value)` pairs with unique keys. `Map(K, V)` is every such domain whose pairs are in `product2(K, V)`; `base` states uniqueness in its builder. A record is a map (VM-REC-1).
+
+## 7. Value notation for test vectors
+
+Examples and test vectors write values in `.sets` value notation (§1–§6). For example:
+
+```text
+member:      {("name", "abc")}
+member:      {("name", "abc"), ("nick", "a")}    (open record: extra key)
+non-member:  {("name", 1)}
+```
+
+## 8. Construct coverage
 
 | Construct (abstract) | Status | Rule |
 | -------------------- | ------ | ---- |
@@ -364,7 +494,7 @@ NonEmptyString = difference(String, {""})
 
 Totals over 25 constructs: 23 mapped (one of them partly a gap), 1 gap, 1 out of scope.
 
-## 7. Open Gaps
+## 9. Open Gaps
 
 **G-1. Lengths and patterns.** Numeric ranges are covered by VM-AX-6, but there are no string or collection length operators and no regular expressions. Interim: described subdomains with prose extents (CS-AX-4). *Non-normative proposal:* a `Length` transformer on strings and sequences, and a `Matches` predicate over a pattern string.
 
@@ -383,6 +513,6 @@ Totals over 25 constructs: 23 mapped (one of them partly a gap), 1 gap, 1 out of
 | `CS-D-OUT-OF-VIEW` | The construct has no values in the declared view. |
 | `CS-D-UNEVALUATED` | Type-level computation couldn't be evaluated. |
 
-## 8. Spec Issues
+## 10. Spec Issues
 
-Both directions share one list, kept in [VALUE-MODEL.md §9](../VALUE-MODEL.md#9-spec-issues).
+Both directions share one list, kept in [VALUE-MODEL.md §5](../VALUE-MODEL.md#5-spec-issues).

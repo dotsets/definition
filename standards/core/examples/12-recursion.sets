@@ -1,5 +1,5 @@
 // 12-recursion: self-reference.
-// Rules: VM-RECUR-1, CS-RECUR-1, CT-RECUR-1
+// Rules: CS-RECUR-1, CT-RECUR-1
 //
 // Abstract source:  Tree = { label: text, children: list<Tree> }
 

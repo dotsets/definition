@@ -2,7 +2,7 @@
 
 - **Standard version:** 0.2.0
 - **Targets `.sets` spec at commit:** `f5a56cc` (`GUIDE.md`)
-- **Depends on:** [Core Value Model](VALUE-MODEL.md) (VM-PRES-3), [`base.sets`](base.sets) (`Tagged`)
+- **Depends on:** [core source standard](source/STANDARD.md) (VM-PRES-3), [`base.sets`](base.sets) (`Tagged`)
 - **Declares:** [`runtime.sets`](runtime.sets), the `runtime` superdomain
 - **Status:** draft
 - **Used by:** [core source standard](source/STANDARD.md), [core target standard](target/STANDARD.md), and every language standard
@@ -15,7 +15,7 @@ Rule IDs are `RT-*`. **Invariant** rules can't be overridden; **Default** rules 
 
 **RT-1 (Invariant). The tags in RT-2 are reserved.** The tag atoms listed in RT-2 (`RuntimeAsync`, `RuntimeMutex`, ...) mean only their runtime concept. No source standard emits one as data. If a language's data can hold an atom with the same spelling (a Ruby symbol `:RuntimeAsync`), the source standard reports a diagnostic instead of emitting it. Other atoms, such as `RuntimeError`, stay ordinary data.
 
-Tags are written in canonical atom form (VM-LEX-4): `RuntimeAsync`, or `\RuntimeAsync` when a domain of that name is in scope. `\Runtime\Async` and `Runtime\Async` spell the same atom and may be used in prose; adapters emit the canonical form.
+Tags are written in canonical atom form (GUIDE, pending): `RuntimeAsync`, or `\RuntimeAsync` when a domain of that name is in scope. `\Runtime\Async` and `Runtime\Async` spell the same atom and may be used in prose; adapters emit the canonical form.
 
 ## Concepts
 

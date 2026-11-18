@@ -90,14 +90,14 @@ Float32 = union(Binary32Finite, IEEESpecial)
 // ---------------------------------------------------------------------
 // Described subdomains. `X sub Y` declares X with members drawn from Y
 // (GUIDE "Difference between `sub` and `in` in this context");
-// VALUE-MODEL.md §5 fixes exactly which members of Y belong to X
+// VALUE-MODEL.md §4 fixes exactly which members of Y belong to X
 // (Char: core source standard, CS-STR-3).
 // ---------------------------------------------------------------------
 
 Char sub String
 
 // ---------------------------------------------------------------------
-// Collections (VALUE-MODEL.md §6.4)
+// Collections (core source standard §6.4)
 // ---------------------------------------------------------------------
 
 // Finite sequences as nested pairs ending in the empty tuple:
@@ -116,7 +116,7 @@ Map({K sub U}, {V sub U}): {
 }
 
 // ---------------------------------------------------------------------
-// Records (VALUE-MODEL.md §6.1). A record is a set of (key, value)
+// Records (core source standard §6.1). A record is a set of (key, value)
 // tuples; a key can be any value. The empty record is {}. Record domains
 // are open unless they say otherwise.
 // ---------------------------------------------------------------------
@@ -139,7 +139,7 @@ OnlyKeys({K sub U}): { r suchthat r in Record and r sub product2(K, U) }
 // ---------------------------------------------------------------------
 // Tagged domains (VM-PRES-3). Tagging D with t gives the domain whose one
 // member is (t, D). Two tagged domains are equal exactly when their tags
-// and their domains are equal (singleton and tuple equality, VM-EQ-1).
+// and their domains are equal (singleton and tuple equality; GUIDE, pending).
 // ---------------------------------------------------------------------
 
 Tagged({t suchthat t in U}, {D sub U}): { (t, D) }

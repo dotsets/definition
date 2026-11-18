@@ -19,7 +19,7 @@ union in base
 JsonString = String
 
 // JSON numbers as most JSON codecs read them (RFC 8259 §6, binary64).
-// 1 and 1.0 are both members and stay distinct (VM-EQ-1);
+// 1 and 1.0 are both members and stay distinct (GUIDE, pending);
 // a view that merges them says so in its View field.
 JsonNumber = Binary64Finite
 

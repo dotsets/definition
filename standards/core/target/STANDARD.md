@@ -4,7 +4,7 @@
 - **Target language / version:** none. This is the base that every `.sets → <language>` standard extends.
 - **Runtime / serialization context:** none. The wire comes from the input's view domain (CS-SCOPE-1); the language standard defines the codec for it
 - **Targets `.sets` spec at commit:** `f5a56cc` (`GUIDE.md`)
-- **Depends on:** [Core Value Model](../VALUE-MODEL.md), [`base.sets`](../base.sets)
+- **Depends on:** [Core Value Model](../VALUE-MODEL.md), [`base.sets`](../base.sets), [core source standard](../source/STANDARD.md) (the `VM-*` principles, encodings and test-vector notation moved there, and CS-STR-*)
 - **Status:** draft
 
 Rule IDs are `CT-*`. **Invariant** rules can't be overridden; **Default** rules can be, through the language standard's Overrides table ([standards/README.md](../../README.md)). Nothing in this standard depends on which language produced the `.sets` input.
@@ -188,7 +188,7 @@ Each rule states its exactness. Examples live in [`../examples/`](../examples/):
 
 **CT-ROS-3 (Invariant). Singleton.** A singleton roster is a one-member `Enum`, or a constant where the language has literal types (exact). It's never widened to the member's kind without a check.
 
-**CT-ROS-4 (Invariant). Domain-valued members.** A roster whose member is a domain (`{Integer}`) is a domain whose members are domains. Domains are values (VM-KIND-1), but core gives no runtime representation for a domain as a value, so this is **unsupported** (`CT-D-UNSUPPORTED`) until a language standard defines one (a type descriptor or reflection handle, for example).
+**CT-ROS-4 (Invariant). Domain-valued members.** A roster whose member is a domain (`{Integer}`) is a domain whose members are domains. Domains are values (GUIDE, pending), but core gives no runtime representation for a domain as a value, so this is **unsupported** (`CT-D-UNSUPPORTED`) until a language standard defines one (a type descriptor or reflection handle, for example).
 
 **CT-ROS-5 (Invariant).** A roster of `Boolean` members and `{Nothing}` use the bound `Boolean` and null types, never a generated enum.
 
@@ -246,7 +246,7 @@ Keys are pairwise distinct. The representation is `Record(k: R(V) … )`, with o
 ### 5.7 Unions
 
 **CT-DISJ-1 (Invariant). Disjointness.** The adapter proves two domains `A` and `B` disjoint when any of these holds. Otherwise it assumes they overlap.
-1. Their members have different kinds (VM-KIND-1): number, atom, tuple, domain; or one holds only strings (quoted atoms, CS-STR-2) and the other only unquoted atoms.
+1. Their members have different kinds (GUIDE, pending): number, atom, tuple, domain; or one holds only strings (quoted atoms, CS-STR-2) and the other only unquoted atoms.
 2. Both are tuples of different arity.
 3. Both are records, one requires key `k`, and the other is closed with `OnlyKeys` that excludes `k`.
 4. Both are records that require the same key `k` with provably disjoint value domains (this is how tag fields discriminate).
@@ -383,11 +383,11 @@ Errors carry a path (`$.items[2].age`) and the domain that rejected the value.
 ## 8. Tests
 
 **CT-TEST-1 (Invariant).** For every rule a language standard instantiates, its test suite includes:
-- at least one **member** that round-trips: value → encode → decode → an equal value (VM-EQ-1, so a `Fractional` `1.0` doesn't come back as the `Integer` `1`);
+- at least one **member** that round-trips: value → encode → decode → an equal value (equality: GUIDE, pending; so a `Fractional` `1.0` doesn't come back as the `Integer` `1`);
 - at least one **non-member** that decode rejects;
 - for overlapping unions, one value in **both** branches whose membership reports are both true after decoding.
 
-Tests compare outputs as domains (VM-EQ-2), by membership, never by text.
+Tests compare outputs as domains (GUIDE, pending), by membership, never by text.
 
 The member and non-member vectors in [`../examples/`](../examples/) are the shared baseline.
 
@@ -395,10 +395,10 @@ The member and non-member vectors in [`../examples/`](../examples/) are the shar
 
 **G-T1. Cardinality.** A domain can't state "exactly n members" or "at most n", so collections have no length constraints beyond tuples. Interim: none needed. The source side reports `CS-D-WIDENED`.
 
-**G-T2. Domain values.** Domains are values (VM-KIND-1), and `SetOf` and `Map` admit infinite domains (VM-SET-1, VM-MAP-1). Rosters of domains (CT-ROS-4) and infinite collection members need a runtime representation of a domain as a value. Interim: unsupported; finite collections bind per CT-COL-*.
+**G-T2. Domain values.** Domains are values (GUIDE, pending), and `SetOf` and `Map` admit infinite domains (VM-SET-1, VM-MAP-1). Rosters of domains (CT-ROS-4) and infinite collection members need a runtime representation of a domain as a value. Interim: unsupported; finite collections bind per CT-COL-*.
 
 **G-T3. Disjointness beyond shape.** CT-DISJ-1 is conservative. For example, it can't prove `{ x suchthat x in Integer and IsEven(x) }` and `{ x suchthat x in Integer and IsOdd(x) }` disjoint, so their union becomes `Overlap` (correct, but heavier than needed). *Non-normative proposal:* a `disjoint` declaration that source adapters may emit and target adapters trust only after checking it against vectors.
 
 ## 10. Spec Issues
 
-Both directions share one list, kept in [VALUE-MODEL.md §9](../VALUE-MODEL.md#9-spec-issues).
+Both directions share one list, kept in [VALUE-MODEL.md §5](../VALUE-MODEL.md#5-spec-issues).

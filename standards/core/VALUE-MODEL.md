@@ -9,35 +9,36 @@
 
 Truth and nothing show the purpose best. The grammar can already write both outcomes of a rule: `\\ in U` always holds and `\\ in Phi` never does. The value model names them `Tautology` and `Contradiction` (VM-AX-4), and declares the one `Nothing` with `Nothing in Phi` (VM-AX-5). A language may still need its own atoms in `.sets` to control its booleans, such as `{true, false}`, but those are data. In `.sets`, real truth is a rule that holds: the state of `Tautology`.
 
-**Every rule is an invariant.** Nothing in this document can be overridden. It defines what `.sets` text means, so every reader, adapter and standard reads the same text the same way. The core standards build on it with their own Invariant and Default rules ([standards/README.md](../README.md)); a language that seems to need a different meaning raises a Spec Issue (§9).
+**Every rule is an invariant.** Nothing in this document can be overridden. It defines what `.sets` text means, so every reader, adapter and standard reads the same text the same way. The core standards build on it with their own Invariant and Default rules ([standards/README.md](../README.md)); a language that seems to need a different meaning raises a Spec Issue (§5).
+
+## Layer 2
+
+`.sets` is built in layers, and the value model is layer 2:
+
+1. **Grammar** (`GUIDE.md`): how `.sets` text is written.
+2. **Value model** (this document): what `.sets` means as a language.
+3. **Core standards** ([source](source/STANDARD.md), [target](target/STANDARD.md)): the invariants and defaults every language standard shares.
+4. **Language standards**: how one language maps to and from `.sets`.
+
+Something new starts in a language standard. If it's justified for every language, it moves into the core standards. If it's justified as part of `.sets` itself, independent of any language, it moves into the value model. Beyond that, it can become grammar, but only with a justified reason to replace an existing way of writing it with new grammar.
+
+Numbers show the path. The grammar already allows symbols spelled like numbers; the value model says which spellings are numbers and what their operators do (§2). That may become grammar later, and then it leaves this document.
 
 <!-- mtoc-start -->
 
+* [Layer 2](#layer-2)
 * [0. Principle: preserve the domain](#0-principle-preserve-the-domain)
-* [1. Value kinds](#1-value-kinds)
-* [2. Lexical conventions for roster symbols](#2-lexical-conventions-for-roster-symbols)
-* [3. Rules and binders](#3-rules-and-binders)
-* [4. Truth and nothing](#4-truth-and-nothing)
-* [5. Ranged and described subdomains](#5-ranged-and-described-subdomains)
-* [6. Structural encodings](#6-structural-encodings)
-  * [6.1 Records](#61-records)
-  * [6.2 Missing fields and null](#62-missing-fields-and-null)
-  * [6.3 Tuples](#63-tuples)
-  * [6.4 Sequences, sets and maps](#64-sequences-sets-and-maps)
-  * [6.5 Recursion](#65-recursion)
-* [7. Equality](#7-equality)
-* [8. Value notation for test vectors](#8-value-notation-for-test-vectors)
-* [9. Spec Issues](#9-spec-issues)
+* [1. Top-level domains](#1-top-level-domains)
+* [2. Symbols and numbers](#2-symbols-and-numbers)
+* [3. Truth and nothing](#3-truth-and-nothing)
+* [4. Ranged and described subdomains](#4-ranged-and-described-subdomains)
+* [5. Spec Issues](#5-spec-issues)
 
 <!-- mtoc-end -->
 
 ## 0. Principle: preserve the domain
 
-**VM-PRES-1. Preserve as much of the domain as the source states.** `.sets` exists to preserve how data is structured, how it's spread across values, and how it's viewed. A `.sets` description keeps every distinction its source makes, even one a likely target can't use: a distinction dropped on the way in can't be recovered on the way out.
-
-How much of the domain survives the IR is the measure of a translation's clarity and correctness. When two encodings are both valid, the one that keeps more of the domain is the better one.
-
-**VM-PRES-2. Preserve the structure of the data.** How data is structured doesn't change between languages. A record is fields and their values, a sequence is ordered elements, and a set is its members, whatever a language calls the type that holds them. A source type maps to the structure of its values, not to the construct the source uses. A struct, an object type and a class instance all hold fields and values, so each maps to a record (§6.1). A class or library type that wraps another structure holds that structure's values and adds none of its own. A JavaScript `Set` is an object whose keys are its members and whose values are empty, so it's a record (VM-SET-1):
+**VM-PRES-2. Preserve the structure of the data.** How data is structured doesn't change between languages. A record is fields and their values, a sequence is ordered elements, and a set is its members, whatever a language calls the type that holds them. A source type maps to the structure of its values, not to the construct the source uses. A struct, an object type and a class instance all hold fields and values, so each maps to a record (VM-REC-1). A class or library type that wraps another structure holds that structure's values and adds none of its own. A JavaScript `Set` is an object whose keys are its members and whose values are empty, so it's a record (VM-SET-1):
 
 ```text
 new Set(["a", "b"])   is the value   {("a", ()), ("b", ())}
@@ -56,40 +57,19 @@ Email = String
 
 TypeScript's `type UserId = string` and `type Email = string` are both strings. `UserId` and `Email` are equal domains, and a value of one is a value of the other. The names are still two declarations, so a target can give each its own type. The name never enters the value: tagging the values (`Tagged`, VM-PRES-3) would make them different data, which the source doesn't have.
 
-**VM-PRES-3. Runtime domains aren't data.** `.sets` describes data at rest. A type whose values exist only while a program runs (a promise, a function, a lock) isn't data, and its behavior isn't transpiled. It's a *runtime domain*: a tagged domain named by its concept, never by its source spelling. It only has to be unique and equal to itself. It says nothing about bytes, and it's never serialized or checked as data.
-
-The common concepts and their tags are registered in [RUNTIME.md](RUNTIME.md). A JavaScript `Promise<string>` is `Async(String)`, never an atom or domain named `Promise`, so it can't collide with an unrelated type that another language happens to call `Promise`.
-
-## 1. Value kinds
-
-**VM-KIND-1.** Every value in the core model has exactly one of these kinds:
-
-| Kind | Examples | Written in `.sets` as |
-| ---- | -------- | --------------------- |
-| Number | `0`, `-7`, `2.5` | numeric symbol |
-| Atom | `true`, `Circle`, `"abc"` | any other symbol |
-| Tuple | `("abc")`, `(1, 2)`, `()` | parentheses |
-| Domain | `{("name", "abc")}`, `{1, 2}`, `{}`, `Integer` | braces, or a domain name |
-
-Any domain is a value, whatever its size. A domain can therefore be a member of another domain: `{Integer}` is the domain whose only member is the domain `Integer`. Records, sets and maps aren't separate kinds; they are domains whose members are values (§6).
-
-A tuple can have any number of components, and each component can be a value of any kind.
-
-Values of different kinds are never equal: `1 ≠ one ≠ (1) ≠ {1}`.
-
-The value model gives quotes no meaning: `"abc"` is an atom whose spelling includes its quotes (VM-LEX-3). Which atoms are strings is for the core source standard (CS-STR-*).
+## 1. Top-level domains
 
 **VM-KIND-2. Top-level domains are undefined domains.** A top-level axiomatic domain (`Integer`, `String`) has no members of its own in `.sets`; it's an *undefined* domain, not an infinite one. Its prose meaning (number axioms, pending; CS-STR-1 for `String`) fixes what its members are, the same in every context. A view may observe only some of them; it never changes what they are.
 
 Inside `.sets`, top-level domains are always disjoint (GUIDE, "Top domain axiom"). A representation may merge several into one type, as JavaScript's `number` does for `Integer` and `Fractional`; the domains stay disjoint.
 
-**Why keep the distinction in `.sets` at all.** A representation can always merge two domains, but nothing can split one that the IR doesn't separate. Keeping `Integer` and `Fractional` apart preserves the domain for every target that can use the difference ([VM-PRES-1](#0-principle-preserve-the-domain)).
+**Why keep the distinction in `.sets` at all.** A representation can always merge two domains, but nothing can split one that the IR doesn't separate. Keeping `Integer` and `Fractional` apart preserves the domain for every target that can use the difference ([VM-PRES-1](source/STANDARD.md#0-principles)).
 
 This only works when the source makes the distinction. A source without it (TypeScript, whose only number type is `number`) produces one combined domain, and nothing downstream can tell which form a value was meant to be ([UP-1](#unsolved-problems)).
 
-## 2. Lexical conventions for roster symbols
+## 2. Symbols and numbers
 
-`GUIDE.md` defines a symbol as a run of UTF-8 characters. This section fixes how a symbol is read: as a number, an atom or a domain name, and how escapes work. Quoting is a convention GUIDE leaves to "the transpiler ecosystem"; it's in the core source standard (CS-STR-2), not here.
+`GUIDE.md` defines a symbol as a run of UTF-8 characters. This section fixes which symbols are numbers and what numeric operators do. How a symbol becomes an atom, and how escapes work, is grammar (pending in GUIDE). Quoting is a convention GUIDE leaves to "the transpiler ecosystem"; it's in the core source standard (CS-STR-2), not here.
 
 **VM-LEX-0. Two parsing layers.** A `.sets` parser has two layers:
 1. **The grammar layer** implements GUIDE only. It splits rosters at unescaped `,`, `{` and `}`, applies GUIDE's whitespace rule, and produces symbols. It gives quotes no special meaning. It keeps escape sequences in the symbol text as written; it only uses them to decide where a symbol ends.
@@ -99,7 +79,7 @@ Both readings of the same text must agree. Writing `{a\, b}` satisfies both: the
 
 An escaped separator isn't a separator. GUIDE's rule that ignores one whitespace byte around a reserved symbol applies only to the unescaped `,`, `{` and `}` of the grammar, never to `\,`, `\{` or `\}`. So in `{a\, b}` the space is part of the atom.
 
-**VM-LEX-2. Numeric symbols are numbers.** A symbol is a number when it starts with a digit (after an optional sign), its spelling is numeric in one of the notations below, and it satisfies `x + 0 = x` (VM-AX-6). Anything else is an atom (VM-LEX-3). An implementation may check the spelling with a pattern and confirm with the identity.
+**VM-LEX-2. Numeric symbols are numbers.** A symbol is a number when it starts with a digit (after an optional sign), its spelling is numeric in one of the notations below, and it satisfies `x + 0 = x` (VM-AX-6). Anything else is an atom (GUIDE, pending). An implementation may check the spelling with a pattern and confirm with the identity.
 
 | Notation | Form | Examples |
 | -------- | ---- | -------- |
@@ -111,48 +91,12 @@ An escaped separator isn't a separator. GUIDE's rule that ignores one whitespace
 | Binary | `0b` or `0B`, then binary digits | `0b101` |
 
 - **Sign.** Any notation may start with `+` or `-`. `+3` and `3` are the same number; `-3` is its negative.
-- **Separators.** Inside a number, `_` between two digits, or `\` before a digit, only separates: `1_000`, `1\000` and `1000` are the same number. `\` is the suggested separator, since an escaped digit is still that digit (VM-LEX-6). `_` anywhere else (`_1`, `1_`, `1__0`, `0x_1`), or an escape on a non-digit (`1\e3`), makes the symbol an atom. A symbol that starts with an escape (`\1`) is an atom.
+- **Separators.** Inside a number, `_` between two digits, or `\` before a digit, only separates: `1_000`, `1\000` and `1000` are the same number. `\` is the suggested separator, since an escaped digit is still that digit (GUIDE, pending). `_` anywhere else (`_1`, `1_`, `1__0`, `0x_1`), or an escape on a non-digit (`1\e3`), makes the symbol an atom. A symbol that starts with an escape (`\1`) is an atom.
 - **The form follows the spelling.** A number is `Fractional` if it's written with a point or a negative exponent, and `Integer` otherwise, even when its fractional part is zero. `3`, `1e3`, `0x1F` and `0x1p3` are in `Integer`; `3.0`, `1.0e3`, `15e-1` and `0x1.8p1` are in `Fractional`.
 - **Leading zeros** don't change a decimal: `007` is `7`, never octal; octal is always written `0o`.
 - **Zero.** `-0` and `+0` are the integer `0`; `-0.0` is the fractional `0.0`. IEEE-754 negative zero is neither; it's the atom `NegativeZero` (number axioms, pending).
 
 **Note: not every number can be written.** Every notation is finite, so a rational such as one third has no literal (UP-2). Exponents keep magnitudes short, and hexadecimal floats write every binary64 value exactly (the value nearest 0.1 is `0x1.999999999999Ap-4`). Operators appear in membership rules (VM-AX-6), not as a way of writing values.
-
-**VM-LEX-3. Other symbols are atoms.** A symbol that isn't a number (VM-LEX-2) or a domain name in scope (VM-LEX-4) is an atom: an opaque value equal only to itself. Quotes are ordinary characters of its spelling, so `Succeeded ≠ "Succeeded"`.
-
-**VM-LEX-4. Escapes make different symbols.** An escaped symbol (VM-LEX-6) is a different symbol from the one it spells: `\Number` doesn't refer to the domain `Number`. It names a domain only if that exact symbol is declared; otherwise it's an atom, spelled without the escapes. To write an atom spelled like a domain in scope, escape one of its characters; the canonical form escapes the first one. `{\Number}` is the atom `Number`; `{Number}` is the domain `Number`.
-
-`@` has no special meaning: `@Number` is an ordinary atom spelled `@Number`. Atoms are written without escapes whenever that's unambiguous.
-
-**VM-LEX-6. Escapes make new symbols.** A backslash can escape any character, in any symbol. The escaped character is taken literally, outside every rule it would otherwise follow, and the result is a new symbol in `U`:
-- `\,`, `\{`, `\}` aren't separators (VM-LEX-0).
-- `\"` is a literal quote; it doesn't open or close a string (CS-STR-2).
-- `\1` is an atom spelled `1`: a number starts with a digit, not an escape (VM-LEX-2). An escaped digit inside a number stays a digit.
-- `\Number` is the atom `Number`, not the domain `Number`, unless `\Number` itself is declared (VM-LEX-4).
-- `\\` is a literal backslash.
-
-Escaping a character that triggers no rule changes nothing: `a\qb` and `aqb` are the same atom. The canonical form escapes only where a rule would otherwise apply.
-
-**Control characters.** A few escapes stand for characters that can't be written literally. They work in any symbol:
-
-| Escape | Character |
-| ------ | --------- |
-| `\n` | line feed, U+000A |
-| `\r` | carriage return, U+000D |
-| `\t` | tab, U+0009 |
-| `\u{H}` | the Unicode scalar value with hex code `H` (1 to 6 hex digits), written only as `\u` followed by `{`, for example `\u{0}` or `\u{1F600}` |
-
-Control characters (U+0000–U+001F and U+007F) aren't allowed raw in a symbol; they're always written as escapes. The canonical form uses `\n`, `\r` and `\t` where they apply and `\u{H}` with uppercase hex and no leading zeros for the rest. A `\u{H}` for a surrogate code point (U+D800–U+DFFF) or a value above U+10FFFF is an error.
-
-## 3. Rules and binders
-
-**VM-RULE-3. Literals in patterns.** A pattern such as `("name", name)` may mix literal values (`"name"`) and binders (`name`). A literal matches only an equal value (VM-EQ-1).
-
-| Pattern | Matches | Doesn't match | Why |
-| ------- | ------- | ------------- | --- |
-| `(Integer, x)` | `(Integer, 5)` | `(3, 5)` | `Integer` is a domain name, so it matches the domain `Integer` itself (VM-KIND-1), not a number in it. To test membership, bind the component and add a clause: `(k, x) in r and k in Integer`. |
-| `(x, x)` | `(1, 1)`, `("a", "a")` | `(1, 2)`, `(1, 1.0)` | A binder used twice must match equal values. |
-| `(1.0, x)` | `(1.0, 5)`, `(1.00, 5)` | `(1, 5)` | `1.0` and `1.00` are the same `Fractional` value; `1` is an `Integer` (VM-LEX-2). |
 
 **VM-AX-6. Numeric operators are mathematical.** Numbers are exact mathematical values with no width (number axioms, pending), so operators on them have their mathematical meaning:
 - `+`, `-`, `*`, `/` give exact results, with no overflow, rounding or wraparound. `1 / 3` is the exact rational one third. Division by zero has no result.
@@ -170,7 +114,7 @@ Results compare by mathematical value but are equal only within one form, so `2 
 
 Equality stays `x in singleton(y)` (GUIDE, "Singletons"); `=` and `!=` aren't operators.
 
-## 4. Truth and nothing
+## 3. Truth and nothing
 
 **VM-AX-4. Truth isn't a value.** Truthiness in `.sets` is whether a rule holds. Only rules have it; no value does, and no value converts to it. Two parameterless predicates name the two outcomes:
 
@@ -199,7 +143,7 @@ There's no other core null atom. A value that may be absent-as-a-value (a nullab
 
 `()` and `{}` are conceptually equal, not literally. A tuple states the order of its components; with no components there is no order to state. If `Phi` held more than one nothing, order among them would matter, and `()` and `{}` would differ. The core deals with one nothing, so within its context the two are treated as equal and either may be written. Neither is `Nothing`.
 
-## 5. Ranged and described subdomains
+## 4. Ranged and described subdomains
 
 **VM-SUB-0. Ranged domains are builders.** A domain bounded by numeric comparisons is written as a builder with VM-AX-6 operators. `base.sets` defines `Natural`, `Int8`…`Int64` and `Uint8`…`Uint64` this way, for example:
 
@@ -241,138 +185,7 @@ A top-level `X sub Y` declares a domain `X` whose members are drawn from `Y`, at
 
 The two readings then disagree about the same domain, and no representation can be correct for both, so the declaration is a defect in `base.sets`. It's fixed by correcting the prose or the `sub` parent, never by choosing one reading at bind time.
 
-**VM-SUB-3. Structured values aren't subdomains.** A value whose representation carries information the number alone doesn't is a structured value, not a subdomain of `Real`. A decimal that keeps its scale is the usual case: decimal128 stores `1.50` as coefficient `150` and exponent `-2`, and `1.5` as `15` and `-1`. They're equal numbers but different values (`1.50 * 2` is `3.00`). Since `1.50` and `1.5` are the same `Fractional` (VM-LEX-2), `Decimal128 sub Real` would lose the scale (VM-PRES-1). Keeping it takes a tuple:
-
-```sets
-Decimal128 = {
-    (c, q) suchthat
-    c in Integer and c > 0 - 10 ^ 34 and c < 10 ^ 34 and
-    q in Integer and q >= -6176 and q <= 6111
-}
-```
-
-Here `1.50` is `(150, -2)` and `1.5` is `(15, -1)`, two members. Special values (NaN, infinities, negative zero) are added with `union`, as `Float64` does.
-
-## 6. Structural encodings
-
-### 6.1 Records
-
-**VM-REC-1. A record value is a set of tuples.** Each member is a field `(key, value)`. A key can be any value, and keys are unique within a record. The record with no fields is `{}`, a set with no tuples. It's the empty domain `Phi`, not a missing value, which is `Nothing` (VM-AX-5). The domain of all records in `base` is:
-
-```sets
-Record = Map(U, U)
-```
-
-```text
-{ name: "abc", age: 123 }   is the value   {("name", "abc"), ("age", 123)}
-{ 1: "abc" }                is the value   {(1, "abc")}
-{ }                         is the value   {}
-```
-
-`{}` is also the empty set, the empty map and, in context, `[]` (VM-AX-5). With nothing inside, there's no field, element or member to tell them apart, so the collision is allowed (VM-PRES-2).
-
-Field names are part of the value, because `{"name": 1}` and `{"nom": 1}` are different data on wires that name fields. A positional tuple `(name, age)` can't keep that difference without relying on binder names, and binder names are scoped symbols that renaming must not affect.
-
-**VM-REC-2. Record builders.** A record domain is written as a builder over a record binder `r`, with each required field as a pattern on `r`:
-
-```sets
-Person = { r suchthat r in Record and ("name", name) in r and name in String }
-```
-
-`r in Record` is what makes the members records. Without it, `{("name", "a"), ("name", 1)}` would be a `Person` even though its keys repeat, so it isn't a record (VM-REC-1). So would `{("name", "a"), 5}`.
-
-Other text can describe the same domain, and it's still the same domain: a domain is its members, not its spelling.
-
-**VM-REC-3. Records are open.** A record domain admits fields it doesn't mention, with any value. This follows from the builder: a rule constrains only the fields it names, so the same `.sets` text means the same domain to every adapter. A closed source type (a Go struct, a sealed class) says so with `OnlyKeys` (VM-REC-4).
-
-```sets
-Person = { r suchthat r in Record and ("name", name) in r and name in String }
-Aged = { r suchthat r in Record and ("age", age) in r and age in Integer }
-Human = union(Person, Aged)
-```
-
-`{("age", 123), ("name", "abc")}` is a `Person`. This is the README `Human` reading: that value is both a `Person` and an `Aged`, so it's a `Human`.
-
-**VM-REC-4. Closed records say so.** A record domain that rejects unmentioned keys adds `r in OnlyKeys({k1, …, kn})`, listing every key it admits: its required keys and its optional keys (VM-MISS-2).
-
-```sets
-ClosedPerson = { r suchthat r in Record and ("name", name) in r and name in String and r in OptionalField("age", Integer) and r in OnlyKeys({"name", "age"}) }
-```
-
-`{("name", "abc")}` and `{("name", "abc"), ("age", 1)}` are `ClosedPerson`s; `{("name", "abc"), ("id", 1)}` isn't, because `"id"` isn't listed.
-
-### 6.2 Missing fields and null
-
-**VM-MISS-1. A missing field is a missing tuple.** Absence isn't a value: a missing field has no tuple at all. A field that's present with nothing in it is a tuple whose value is `Nothing` (VM-AX-5). These are different records:
-
-```text
-{name: "abc"}               is   {("name", "abc")}
-{name: "abc", age: null}    is   {("name", "abc"), ("age", Nothing)}
-```
-
-Kinds of absence in between, such as JavaScript's `undefined`, are ordinary values; `.sets` gives them no special meaning.
-
-**VM-MISS-2. Optional fields.** `r in OptionalFields(K, V)` says: every field of `r` whose key is in `K`, if present, has a value in `V`. `K` is a domain of keys, so one call can make several fields optional with the same value domain. `OptionalField(k, V)` is the single-key helper, `OptionalFields({k}, V)`. In `base`:
-
-```sets
-OptionalFields({K sub U}, {V sub U}): {
-    r suchthat
-    r in Record and
-    r not in { s suchthat (k, v) in s and k in K and v not in V }
-}
-
-OptionalField({k suchthat k in U}, {V sub U}): OptionalFields({k}, V)
-```
-
-```sets
-Person = { r suchthat r in Record and ("name", name) in r and name in String and r in OptionalField("age", Integer) }
-```
-
-`{("name", "a")}` and `{("name", "a"), ("age", 1)}` are `Person`s. `{("name", "a"), ("age", "x")}` isn't, and nor is `{("name", "a"), ("age", Nothing)}`, because `Nothing` isn't in `Integer`. A field that may also be null uses `union(Integer, {Nothing})` (VM-AX-5).
-
-A field that's neither required nor optional in an open record can hold anything (VM-REC-3).
-
-### 6.3 Tuples
-
-**VM-TUP-1. Tuples are ordered.** An n-tuple `(v1, …, vn)` is ordered and nests without flattening (GUIDE, "Tuples and Vectors"). A tuple with at least one component is its own kind of value (VM-KIND-1), never a record or another domain; the empty tuple `()` is treated as `{}` in the core context (VM-AX-5). Sequences are built from tuples (VM-SEQ-1), so a nested pair ending in `()`, such as `(a, (b, ()))`, is also a sequence.
-
-### 6.4 Sequences, sets and maps
-
-**VM-SEQ-1. Sequences are nested pairs.** A finite sequence is a nested pair ending in the empty tuple: `[]` is `()`, and `[a, b]` is `(a, (b, ()))`. `Seq(T)` is the domain of finite sequences over `T`. Because `()` is treated as `{}` (VM-AX-5), `[]` collides with the empty record, set and map; that collision is allowed (VM-REC-1).
-
-**VM-SET-1. Sets are domains.** A set of values is a domain, so `{"a", "b"}` is the set of `"a"` and `"b"`. `SetOf(T)` is the domain of all subdomains of `T` (`s sub T`).
-
-**VM-MAP-1. Maps are domains of pairs.** A map is a domain of `(key, value)` pairs with unique keys. `Map(K, V)` is every such domain whose pairs are in `product2(K, V)`; `base` states uniqueness in its builder. A record is a map (VM-REC-1).
-
-### 6.5 Recursion
-
-**VM-RECUR-1. Domains may be recursive.** A domain may refer to itself, directly or through other named domains. A recursive domain holds exactly the values built from its rule in finitely many steps (its least fixed point): `Seq(T)` holds every finite sequence, but not an endless one. So `X = X` is `{}`, and `X = union(X, {1})` is `{1}`. A member may still be an infinite domain (VM-KIND-1); only the building is finite. Cyclic data, such as an object that refers to itself, isn't a value.
-
-## 7. Equality
-
-**VM-EQ-1. Equality.** Two atoms are equal exactly when their canonical spellings are the same (VM-LEX-*), with no other normalization. So `a\qb` is `aqb`, and `"1"` isn't `1`.
-
-Two numbers are equal exactly when they have the same form (`Integer` or `Fractional`, VM-LEX-2) and the same mathematical value, however they're written. So `1e3` is `1000`, `0x1F` is `31`, `15e-1` and `1.50` are `1.5`, but `1` isn't `1.0` and `1000` isn't `1.0e3`. This also covers a number computed by an operator (VM-AX-6) that has no spelling, such as `1 / 3` (UP-2).
-
-Built values compare by structure:
-- tuples: the same arity and pairwise equal components;
-- domains: the same members. Undefined domains (top-level axioms, VM-KIND-2) are disjoint from one another, and each is equal only to itself. `()` and `{}` are treated as equal in the core context (VM-AX-5).
-
-`Nothing` is equal only to itself; whether another declaration into `Phi` equals it is undefined (VM-AX-5). `x in singleton(y)` holds exactly when `x` and `y` are equal (GUIDE, "Singletons").
-
-**VM-EQ-2. Layout carries no meaning.** Two `.sets` texts are equivalent when they declare the same names with equal domains (VM-EQ-1). Declaration order, field and member order, repeated roster members, how a `union` or `intersect` chain nests, whitespace and comments don't change a domain.
-
-## 8. Value notation for test vectors
-
-Examples and test vectors write values in `.sets` value notation (§1–§6). For example:
-
-```text
-member:      {("name", "abc")}
-member:      {("name", "abc"), ("nick", "a")}    (open record: extra key)
-non-member:  {("name", 1)}
-```
-
-## 9. Spec Issues
+## 5. Spec Issues
 
 Ambiguities and contradictions in `README.md` (`b52f182`) and `GUIDE.md` (`f5a56cc`) that the core standards had to resolve. Each lists the interpretation the core standards assume.
 
@@ -383,9 +196,9 @@ Ambiguities and contradictions in `README.md` (`b52f182`) and `GUIDE.md` (`f5a56
 | SI-18 | GUIDE's `base.sets` example lists only `u`, `phi` and the operations, and defines `U = u` and `Phi = phi` as aliases. `base` now also holds the axioms, described subdomains and structural transformers. | [`base.sets`](base.sets) is the full `base`, with `U` and `Phi` and no lowercase aliases. GUIDE's example could point to it. |
 | SI-6 | GUIDE says function parameters must be domains, but `IsOne(x)` and `ToUser(x, y)` take bare parameters. | Core only uses `{X sub D}` and `{x suchthat …}` parameters. |
 | SI-7 | `=`, `sub or =`, `!=` (GUIDE) and `subsetof` (README `Human`) appear but aren't defined. | Not used. `%` is now defined by VM-AX-6. |
-| SI-8 | `base` shows a variadic `union({A sub u}, {B sub u}, ...)`; variadic parameters aren't defined. | Binary `union`/`intersect`; a chain nests them, and any nesting means the same (VM-EQ-2). |
+| SI-8 | `base` shows a variadic `union({A sub u}, {B sub u}, ...)`; variadic parameters aren't defined. | Binary `union`/`intersect`; a chain nests them, and any nesting means the same (GUIDE, pending). |
 | SI-12 | "`{x} in U` *can* be written as `{x} sub U`" mixes membership and subset. | In a rule, `s sub T` means every member of `s` is in `T` (used by `SetOf`, `Map`, `OnlyKeys`). Pending in GUIDE; see the notes below. |
-| SI-14 | There's no grammar for cardinality, finiteness, string length or patterns. | Prose rules for described subdomains (§5) and the gaps in each standard. Ranges and floating-point domains are covered by VM-AX-6; key uniqueness is in the `Map` builder (VM-MAP-1); finiteness of a language's sets and maps is left to its standard (VM-SET-1, VM-MAP-1). |
+| SI-14 | There's no grammar for cardinality, finiteness, string length or patterns. | Prose rules for described subdomains (§4) and the gaps in each standard. Ranges and floating-point domains are covered by VM-AX-6; key uniqueness is in the `Map` builder (VM-MAP-1); finiteness of a language's sets and maps is left to its standard (VM-SET-1, VM-MAP-1). |
 | SI-15 | `//` comments are used throughout but aren't part of the grammar. | Allowed; they carry no meaning. |
 | SI-16 | README says TypeScript's `Person \| Aged` is an "intersection". As a domain it's a union of open records whose members can satisfy both branches. | Terminology only. `union(Person, Aged)` with open records (VM-REC-3). |
 | SI-19 | Is arithmetic needed in `.sets` at all? VM-AX-6 operators exist for ranges (`Int32`) and float formats (`m * 2 ^ e`), but they bring evaluation into a language of domains, and the VM-LEX-2 note already avoids literal math. | Open question for the spec author. Arithmetic stays allowed in comparisons and call arguments, and is forbidden inside tuples (GUIDE, pending). |
@@ -407,12 +220,12 @@ Problems the core standards know about but don't solve yet. These are concerns o
 | SI-1 | The universal domain was spelled both `u` and `U`, and the empty domain both `phi` and `Phi`. | `U` and `Phi` only; `base.sets` drops the lowercase aliases. |
 | SI-2 | Record members were `{name, age}` in GUIDE and `(name)` in README. | Records are sets of `(key, value)` tuples: `{r suchthat ("name", n) in r and n in String}` (VM-REC-*). |
 | SI-3 | There was no shared axioms superdomain. | `core` is merged into `base`. |
-| SI-4 | Quoting was only a convention. | VM-LEX-2 to VM-LEX-4 are accepted for now; quoted strings are CS-STR-2. |
+| SI-4 | Quoting was only a convention. | VM-LEX-2 is accepted for now; atoms and escapes are pending in GUIDE; quoted strings are CS-STR-2. |
 | SI-5 | `and`/`or` had no precedence. | Boolean algebra with `()` grouping. Pending in GUIDE; see the notes below. |
 | SI-9 | The empty tuple wasn't defined. | `()` is the 0-tuple. It's conceptually equal to `{}`, not literally: with no components there is no order to state, and the core treats them as equal (VM-AX-5). |
-| SI-10 | Recursion wasn't defined. | Allowed (VM-RECUR-1). |
-| SI-11 | Top-level `X sub Y` seemed undefined. | Defined in GUIDE, "Difference between `sub` and `in` in this context" (§5). |
-| SI-13 | Literals inside patterns weren't defined. | Allowed (VM-RULE-3). |
+| SI-10 | Recursion wasn't defined. | Allowed. Pending in GUIDE; see the notes below. |
+| SI-11 | Top-level `X sub Y` seemed undefined. | Defined in GUIDE, "Difference between `sub` and `in` in this context" (§4). |
+| SI-13 | Literals inside patterns weren't defined. | Allowed. Pending in GUIDE; see the notes below. |
 
 ### Notes for the spec author
 
@@ -423,4 +236,8 @@ Decisions made in review that belong in `GUIDE.md`. The standards already rely o
 3. **Rule-local binders** (SI-17). A symbol that first appears inside a rule is existential over the rule.
 4. **Names.** `U` and `Phi` are the only spellings of the universal and empty domains; GUIDE's `u` and `phi` aliases go away. A declared domain or function can't be redeclared, which GUIDE's "Domain Validation" section could state.
 5. **Nothing** (VM-AX-5). `Nothing in Phi` declares the one nothing, as a deliberate paradox. `Phi` is the empty domain, not nothing. `()` and `{}` are conceptually equal, not literally. GUIDE's "Tuples and Vectors" section could say so.
-6. **Escapes** (VM-LEX-0, VM-LEX-6). An escaped character makes a new symbol and isn't a separator. GUIDE's symbol definition could state the two parsing layers.
+6. **Escapes** (VM-LEX-0). An escaped character makes a new symbol and isn't a separator. GUIDE's symbol definition could state the two parsing layers.
+7. **Value kinds and equality.** Numbers, atoms, tuples and domains, and when two values or two texts are equal. Redeclaration (item 4) depends on equality: a name is redeclared when it equals one in scope.
+8. **Atoms** (SI-4). A symbol that isn't a number or a domain name is an atom, quotes included; item 6 covers escapes.
+9. **Recursion** (SI-10). A domain may refer to itself, and holds the values its rule builds in finitely many steps.
+10. **Literals in patterns** (SI-13). A literal in a pattern matches only an equal value.
