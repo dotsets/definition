@@ -7,6 +7,7 @@ Binary64Finite in base
 Boolean in base
 Int32 in base
 String in base
+U in base
 
 Name = String
 Count = Int32

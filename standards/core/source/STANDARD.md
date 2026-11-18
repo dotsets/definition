@@ -61,33 +61,17 @@ Under this view, `number` maps to `Binary64Finite`, `x?: T` to `OptionalField("x
 
 Every mapping in the standard is relative to this view. A view is always a view of values: identity and cycles aren't values (VM-RECUR-1), so even a runtime view narrows to values.
 
-**CS-SCOPE-2 (Default). The core view is data.** Unless a language standard says otherwise, the view is serializable data: the values of the [Core Value Model](../VALUE-MODEL.md). Behavior (functions, channels, promises) and identity (pointers as addresses) are out of scope (§5.15).
+**CS-SCOPE-2 (Invariant). The core view.** The core view is the [Core Value Model](../VALUE-MODEL.md) itself: every core value, observed through no particular wire. Its view domain is `U`. The core examples use this view. A language standard may declare it as its own view (`View: core`), or declare another view under CS-SCOPE-1.
+
+Runtime-only types aren't values of any view. They map to their runtime concept (VM-PRES-3, [RUNTIME.md](../RUNTIME.md)) whatever the view, and the view-domain requirement of CS-SCOPE-1 doesn't apply to them. Identity (pointers as addresses) and cycles aren't values either (VM-RECUR-1).
 
 ## 2. Conventions
 
-**CS-CONV-1 (Invariant). Imports.** Every emitted file begins with imports of exactly the `base` domains it uses, sorted by domain name, then imports from other superdomains, grouped by superdomain name in sorted order:
+**CS-CONV-1 (Invariant). Imports.** An emitted file imports every symbol it uses and its view domain (CS-SCOPE-1), and nothing else. A core-view file imports `U in base`; a JSON-view file imports `JsonValue in json`, whether or not a declaration uses it. Every domain a file references is declared in it, written inline, or imported; no symbol is built in, `U` included (GUIDE, "Domain Validation").
 
-```sets
-Int64 in base
-Record in base
-String in base
-union in base
-
-Address in geo
-```
-
-**CS-CONV-2 (Invariant). No unknown domains.** Every domain referenced is declared, constructed, imported or `U` (GUIDE, "Domain Validation"). Adapters don't rely on implementation magic.
-
-**CS-CONV-3 (Default). Domain names.** A named source type becomes a domain of the same name. If the name contains a reserved character (`,`, `{`, `}`), the character is escaped as GUIDE describes (`\,`). If two source types in one module would produce the same domain name, the language standard defines the disambiguation.
-
-A declared name can't be redeclared (VM-NAME-1). If a source type's name is already in scope (a `base` name such as `String` or `Record`, an imported name, or an earlier declaration), the adapter renames the source type instead of emitting a second declaration. The language standard defines the rename.
-
-**CS-CONV-4 (Invariant). Determinism.** The same source input produces byte-identical `.sets`:
-- declarations follow source declaration order, after the imports;
-- record fields are listed in key order by Unicode code point (keys are values, so their order carries no meaning);
-- roster members follow source order, and duplicate members are dropped;
-- `union`/`intersect` chains nest right-associatively, `union(A, union(B, C))`, with operands in source order;
-- one declaration per line group, four-space indentation, `//` comments only where §7 requires a diagnostic note.
+**CS-CONV-3 (Default). Domain names.** A named source type becomes a domain of the same name. A character that can't appear bare in a symbol, such as a separator (`,`, `{`, `}`), is escaped (VM-LEX-6); the escaped symbol is still that domain's name (VM-LEX-4). When the name is already taken:
+- If the source type describes the same domain as the one in scope, it is that domain and nothing new is declared (VM-PRES-2, "Collisions"). JavaScript's `String` is `String` from `base`.
+- Otherwise the language standard renames it. That covers a name already in scope (VM-NAME-1: a `base` name, an imported name such as `Async` from `runtime`, an earlier declaration) and two source types in one module that would get the same name.
 
 **CS-CONV-5 (Invariant). Binder names.** The record binder is `r`. Each field's value binder is the key's spelling when that's a valid symbol and doesn't collide with `r` or a domain in scope; otherwise it's `_` followed by the key spelling with reserved characters escaped. Binders in other builders are `x`, `y`, `z`, then `x1`, `x2`, …. Binders are scoped symbols, so this rule only exists to make outputs comparable.
 
@@ -95,11 +79,13 @@ A declared name can't be redeclared (VM-NAME-1). If a source type's name is alre
 
 ## 3. Axioms
 
-**CS-AX-1 (Invariant). Reuse `base`.** Scalars map to `base` axioms and described subdomains whenever the prose meaning matches (VALUE-MODEL §4–§5). A language standard declares a new axiom only under VM-AX-7.
+**CS-AX-1 (Invariant). Reuse `base`; new axioms only for new values.** Scalars map to `base` axioms and described subdomains whenever the prose meaning matches (VALUE-MODEL §4–§5). Values that exist in `base` (dates, UUIDs, decimals) are described subdomains of `base` domains, because a new axiom would be disjoint from them (VM-AX-8). A language standard declares a new top-level axiom only for values no `base` domain contains. Runtime-only types aren't values and never become axioms (VM-PRES-3).
 
 **CS-AX-2 (Invariant). Disjointness check.** Before declaring an axiom, the language standard shows that no value of the new axiom is a value of an existing axiom. If two of the language's types share values (`int` and `float` both hold `1`), they're described subdomains of one axiom, or unions of axioms, never two axioms.
 
 **CS-AX-3 (Default). Language superdomain.** Language-specific domains go in `<language>.sets`. That file imports from `base` and redefines nothing it provides.
+
+**CS-AX-4 (Default). Described subdomains.** A language standard writes further ranged domains as builders (VM-SUB-0), and declares the remaining described subdomains in its superdomain (CS-AX-3) with the `sub` form (`Uuid sub String`, `Rfc3339Timestamp sub String`). Each one needs a prose extent precise enough to write a membership check from. The language standard owns them the way `base` owns its own (VM-SUB-1): it states how they overlap, and prose that contradicts a subdomain's `sub` parent is a defect in that standard. How it describes a domain (prose, builder or structured value, VM-SUB-3) is its own choice.
 
 ## 4. Decisions
 
@@ -124,7 +110,7 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 
 ### 5.1 Scalars
 
-**CS-SCA-1 (Invariant).** A scalar type maps to the narrowest `base` domain whose prose extent equals the type's extent in the view. The mapping keeps every distinction the view makes (VM-PRES-1): a view that tells integers from fractions keeps `Integer` and `Fractional` apart (VM-AX-2).
+**CS-SCA-1 (Invariant).** A scalar type maps to the narrowest `base` domain whose prose extent equals the type's extent in the view. The mapping keeps every distinction the view makes (VM-PRES-1): a view that tells integers from fractions keeps `Integer` and `Fractional` apart (VM-AX-2). Which form a number takes is fixed by the view: a binary64 `1.0` is the `Fractional` `1.0` where the view keeps the distinction, and the `Integer` `1` where it doesn't (UP-1).
 
 | Abstract construct | Canonical `.sets` |
 | ------------------ | ----------------- |
@@ -139,7 +125,11 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 | Unit `()` | `{()}` |
 | Byte string | `Seq(Uint8)` |
 
-**CS-SCA-2 (Invariant). Exact or wider, never narrower.** If no `base` domain matches exactly, the language standard declares a described subdomain (VM-SUB-2). It doesn't silently map to a narrower or wider domain. Widening loses a distinction the source makes (VM-PRES-1), so a wider mapping is allowed only with a diagnostic comment on the declaration, for example `Decimal = Real // CS-D-WIDENED: scale and precision not encoded`.
+`Boolean` is the roster `{true, false}` in `base`: two atoms, like any enum. They're data and hold no truth (VM-AX-4). A boolean type maps by its values in the view: two atom-like values are `Boolean`; C's `_Bool` holds the integers `0` and `1`, so it's `{0, 1}`.
+
+**CS-SCA-2 (Invariant). Exact or wider, never narrower.** If no `base` domain matches exactly, the language standard declares a described subdomain (CS-AX-4). It doesn't silently map to a narrower or wider domain. Widening loses a distinction the source makes (VM-PRES-1), so a wider mapping is allowed only with a diagnostic comment on the declaration, for example `Decimal = Real // CS-D-WIDENED: scale and precision not encoded`.
+
+**CS-SCA-3 (Default). IEEE special values.** A view's NaN maps to `NotANumber`, folding every payload into it. A language whose view can observe payloads keeps them with its own domain in `<language>.sets` (VM-PRES-1). A view with a negative zero maps it to `NegativeZero`; a view without one never produces it.
 
 **Edge cases.** Code units versus scalar values (UTF-16 strings that can contain lone surrogates aren't `String` in the core sense; the language standard declares its own described domain). An integer type the view serializes as a JSON string is a `String` subdomain in that view, not an `Integer`.
 
@@ -153,7 +143,7 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 
 **CS-ENUM-1 (Default).** An enumeration maps by its value in the view. If members carry string values, they're quoted strings: `{"Succeeded", "Failed"}`. If they carry numbers, they're numeric symbols. If the members are values in their own right with no underlying string or number (Rust unit variants, sealed singletons), they're atoms: `{Succeeded, Failed}`.
 
-**CS-NUM-3 (Default).** A numeric literal is written as its exact decimal value (VM-LEX-2). Every binary64 value has a finite decimal expansion.
+**CS-NUM-3 (Default).** A numeric literal is written in a notation that spells its value exactly, in the same form (VM-LEX-2). Every binary64 value has an exact hexadecimal float, and an exact decimal.
 
 **Edge cases.** A literal that spells a domain name in scope becomes `"Number"` as a string or `\Number` as an atom (VM-LEX-4). The empty roster is `Phi`, not `{}` (CS-TOP-2).
 
@@ -163,7 +153,7 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 
 ### 5.3 Records
 
-**CS-REC-1 (Invariant).** A record, struct, object or class shape maps to the preferred record form (VM-REC-2). `r in Record` is required, and adapters write it first; then one clause per field in key order, using binders per CS-CONV-5. The record form keeps every field the view has (VM-PRES-1):
+**CS-REC-1 (Invariant).** A record, struct, object or class shape maps to a record builder (VM-REC-2). Other text can describe the same domain, but adapters emit this form so every reader recognizes it. `r in Record` is required, and adapters write it first; then one clause per field in key order, using binders per CS-CONV-5. The record form keeps every field the view has (VM-PRES-1):
 
 ```sets
 User = {
@@ -258,7 +248,7 @@ Human = union(Person, Aged)
 
 ### 5.10 Collections
 
-**CS-COL-1 (Invariant).** Variable-length list, array, slice → `Seq(T)`. Set → `SetOf(T)`, or a record of keys with `()` values when the language standard reads its set type that way (VM-SET-1, VM-PRES-2). Map or dictionary → `Map(K, V)`. Index signature `{[k: string]: V}` → `Map(String, V)`.
+**CS-COL-1 (Invariant).** Variable-length list, array, slice → `Seq(T)`. Set → `SetOf(T)`, or a record of keys with `()` values when the language standard reads its set type that way (VM-SET-1, VM-PRES-2). Map or dictionary → `Map(K, V)`. Index signature `{[k: string]: V}` → `Map(String, V)`. A language's set and map types are finite, and the language standard narrows `SetOf(T)` and `Map(K, V)` to that.
 
 **CS-COL-2 (Invariant).** A record with fixed fields plus an index signature for the rest is the intersection of the record and a constraint on its other fields. That's expressible only when the fixed fields' values are also in `V`: `intersect(Fixed, Map(String, V))`. Otherwise it's a gap (§7, G-3); the adapter emits the open record `Fixed` with a `// CS-D-GAP index-signature` comment, and reports a diagnostic.
 
@@ -301,11 +291,13 @@ Tree = {
 }
 ```
 
+Cyclic data isn't a value (VM-RECUR-1); a language standard that keeps it encodes the references as data, such as ids or paths.
+
 **Example:** [`examples/12-recursion.sets`](../examples/12-recursion.sets)
 
 ### 5.14 Refinements
 
-**CS-REF-1 (Invariant).** Value constraints that the language's type system or schema annotations enforce (ranges, lengths, patterns, non-empty) are part of the domain. Use numeric operators (VM-AX-6), `difference`, `not in`, rosters or predicates when the grammar can express the constraint. Otherwise declare a described subdomain with a prose extent (VM-SUB-2):
+**CS-REF-1 (Invariant).** Value constraints that the language's type system or schema annotations enforce (ranges, lengths, patterns, non-empty) are part of the domain. Use numeric operators (VM-AX-6), `difference`, `not in`, rosters or predicates when the grammar can express the constraint. Otherwise declare a described subdomain with a prose extent (CS-AX-4):
 
 ```sets
 Percent = { x suchthat x in Real and x >= 0 and x <= 100 }
@@ -330,7 +322,7 @@ NonEmptyString = difference(String, {""})
 | Construct (abstract) | Status | Rule |
 | -------------------- | ------ | ---- |
 | Text, char, integers, floats, booleans, null, unit | mapped | CS-SCA-1 |
-| Decimals, dates, UUIDs | mapped through language described subdomains | CS-SCA-2, VM-SUB-2 |
+| Decimals, dates, UUIDs | mapped through language described subdomains | CS-SCA-2, CS-AX-4 |
 | Literal types, literal unions | mapped | CS-LIT-1, CS-LIT-2 |
 | Enumerations | mapped | CS-ENUM-1 |
 | Pattern / template-literal types | gap (G-4) | CS-REF-2 |
@@ -359,7 +351,7 @@ Totals over 25 constructs: 23 mapped (one of them partly a gap), 1 gap, 1 out of
 
 ## 7. Open Gaps
 
-**G-1. Lengths and patterns.** Numeric ranges are covered by VM-AX-6, but there are no string or collection length operators and no regular expressions. Interim: described subdomains with prose extents (VM-SUB-2). *Non-normative proposal:* a `Length` transformer on strings and sequences, and a `Matches` predicate over a pattern string.
+**G-1. Lengths and patterns.** Numeric ranges are covered by VM-AX-6, but there are no string or collection length operators and no regular expressions. Interim: described subdomains with prose extents (CS-AX-4). *Non-normative proposal:* a `Length` transformer on strings and sequences, and a `Matches` predicate over a pattern string.
 
 **G-2. Cardinality and finiteness.** The grammar can't say that a domain is finite. `SetOf` and `Map` admit infinite domains (VM-SET-1, VM-MAP-1), and `Map` states key uniqueness in its builder. Interim: a language standard narrows its finite collections in prose.
 
@@ -378,4 +370,4 @@ Totals over 25 constructs: 23 mapped (one of them partly a gap), 1 gap, 1 out of
 
 ## 8. Spec Issues
 
-Both directions share one list, kept in [VALUE-MODEL.md §10](../VALUE-MODEL.md#10-spec-issues).
+Both directions share one list, kept in [VALUE-MODEL.md §9](../VALUE-MODEL.md#9-spec-issues).

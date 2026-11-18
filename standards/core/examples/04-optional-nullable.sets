@@ -8,6 +8,7 @@ OnlyKeys in base
 OptionalField in base
 Record in base
 String in base
+U in base
 union in base
 
 Profile = {

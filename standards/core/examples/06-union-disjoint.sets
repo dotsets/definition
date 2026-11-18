@@ -8,6 +8,7 @@ OnlyKeys in base
 Real in base
 Record in base
 String in base
+U in base
 union in base
 
 Id = union(String, Integer)            // disjoint: different axioms (CT-DISJ-1 rule 5)

@@ -21,8 +21,8 @@ Phi = {}
 Nothing in Phi
 
 // The two outcomes of a rule. Truth isn't a value (VM-AX-4).
-Truef: \\ in U
-Falsef: \\ in Phi
+Tautology: \\ in U
+Contradiction: \\ in Phi
 
 // ---------------------------------------------------------------------
 // Domain operations (GUIDE "Domain operations built on axioms")
@@ -45,7 +45,7 @@ Fractional
 Real = union(Integer, Fractional)
 
 // ---------------------------------------------------------------------
-// Atom rosters (VM-AX-3, VM-AX-4). A nullable domain is
+// Atom rosters (VM-AX-3, CS-SCA-1). A nullable domain is
 // union(T, {Nothing}); there's no null atom (VM-AX-5).
 // ---------------------------------------------------------------------
 

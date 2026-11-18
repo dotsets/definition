@@ -9,6 +9,7 @@ Real in base
 Seq in base
 SetOf in base
 String in base
+U in base
 
 Tags = Seq(String)
 Unique = SetOf(Integer)

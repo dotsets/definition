@@ -5,6 +5,7 @@
 
 Integer in base
 String in base
+U in base
 Uint8 in base
 
 Pair = { (x, y) suchthat x in String and y in Integer }

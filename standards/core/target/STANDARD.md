@@ -49,7 +49,7 @@ Rule IDs are `CT-*`. **Invariant** rules can't be overridden; **Default** rules 
 **CT-SCOPE-2 (Invariant). Output.** For each named domain, the adapter generates:
 1. a **type** (the representation, §2.1);
 2. a **membership check** whenever the representation is over-approximate;
-3. a **codec** for the view's wire (CS-SCOPE-1), as the language standard defines it, where decoding accepts every member and rejects every non-member (VM-WIRE-1).
+3. a **codec** for the view's wire (CS-SCOPE-1), as the language standard defines it. It's one-to-one on each domain: decoding accepts every member and rejects every non-member, and no two members share a wire form. A domain where two members would share one gets `CT-D-WIRE-AMBIGUOUS`, not a guess.
 
 **CT-SCOPE-3 (Default). Runtime support.** Generated code may depend on a small support library (§7). A language standard that forbids that inlines the helpers.
 
@@ -121,7 +121,7 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 | `CT-D-UNSUPPORTED` | error | The domain form has no representation rule. |
 | `CT-D-UNDER` | warning | The representation loses members; the message names them. |
 | `CT-D-UNBOUND` | warning | An axiom has no binding; `Opaque` is used (CT-AXB-3). |
-| `CT-D-WIRE-AMBIGUOUS` | error | The wire projection isn't one-to-one on this domain (VM-WIRE-1). |
+| `CT-D-WIRE-AMBIGUOUS` | error | The wire form isn't one-to-one on this domain (CT-SCOPE-2). |
 | `CT-D-RECURSION` | error | The target can't represent this recursive domain. |
 
 ## 3. Axiom bindings
@@ -212,7 +212,7 @@ Each rule states its exactness. Examples live in [`../examples/`](../examples/):
 
 **CT-TUP-2 (Invariant). No flattening.** A nested tuple `((x), (y))` is a `Tuple` whose components are 1-tuples. A 1-tuple `(x)` is `Tuple(R)` and never `R`.
 
-**CT-TUP-3 (Invariant).** The unit domain `{()}` becomes a unit-like `Tuple()`. `()` is conceptually `{}` (VM-AX-5), so in a domain that admits both an empty tuple and an empty record or collection, the wire projection must tell them apart or report `CT-D-WIRE-AMBIGUOUS`.
+**CT-TUP-3 (Invariant).** The unit domain `{()}` becomes a unit-like `Tuple()`. `()` is conceptually `{}` (VM-AX-5), so in a domain that admits both an empty tuple and an empty record or collection, the codec must tell them apart or report `CT-D-WIRE-AMBIGUOUS`.
 
 **Example:** [`examples/05-tuple.sets`](../examples/05-tuple.sets)
 
@@ -299,7 +299,7 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 
 **CT-COL-3 (Default).** `Map(K, V)` becomes `Dict(R(K), R(V))` when `R(K)` can be a native key (exact). Otherwise it's `Checked(List(Tuple(R(K), R(V))), unique keys)` (over + check).
 
-**CT-COL-4 (Default). Wrapper types.** A language standard may represent a fundamental domain with a wrapper type when the wrapper holds exactly that domain (VM-PRES-2): JavaScript's `Set` for a record of keys with `()` values, or a date class for a timestamp string. The wrapper is a representation choice; the domain stays the fundamental.
+**CT-COL-4 (Default). Wrapper types.** A language standard may represent a fundamental domain with a wrapper type when the wrapper holds exactly that domain (VM-PRES-2): JavaScript's `Set` for a record of keys with `()` values, or a date class for a timestamp string. The wrapper is a representation choice; the domain stays the fundamental. The empty value `()` binds to the target's own nothing-like unit, such as Go's `struct{}{}`.
 
 **Example:** [`examples/10-collections.sets`](../examples/10-collections.sets)
 
@@ -387,6 +387,8 @@ Errors carry a path (`$.items[2].age`) and the domain that rejected the value.
 - at least one **non-member** that decode rejects;
 - for overlapping unions, one value in **both** branches whose membership reports are both true after decoding.
 
+Tests compare outputs as domains (VM-EQ-2), by membership, never by text.
+
 The member and non-member vectors in [`../examples/`](../examples/) are the shared baseline.
 
 ## 9. Open Gaps
@@ -399,4 +401,4 @@ The member and non-member vectors in [`../examples/`](../examples/) are the shar
 
 ## 10. Spec Issues
 
-Both directions share one list, kept in [VALUE-MODEL.md §10](../VALUE-MODEL.md#10-spec-issues).
+Both directions share one list, kept in [VALUE-MODEL.md §9](../VALUE-MODEL.md#9-spec-issues).

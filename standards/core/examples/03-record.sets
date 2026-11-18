@@ -1,5 +1,5 @@
 // 03-record: records, nested records, field keys as values, closed records.
-// Rules: VM-REC-*, CS-REC-1 to CS-REC-4, CS-CONV-4, CS-CONV-5, CT-REC-1 to CT-REC-3
+// Rules: VM-REC-*, CS-REC-1 to CS-REC-4, CS-CONV-5, CT-REC-1 to CT-REC-3
 //
 // Abstract source:
 //   Address = { city: text }                                (open)
@@ -10,6 +10,7 @@ Int64 in base
 OnlyKeys in base
 Record in base
 String in base
+U in base
 
 Address = { r suchthat r in Record and ("city", city) in r and city in String }
 

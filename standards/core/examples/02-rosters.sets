@@ -8,6 +8,8 @@
 //   Mixed     = "auto" | 0                                  (literal union, two kinds)
 //   Keyword   = "Number" | Number-the-atom                  (collides with a domain name)
 
+U in base
+
 Number = {1}  // a local domain named Number, to show the collision
 
 Status = {"Succeeded", "Failed", "Processing"}

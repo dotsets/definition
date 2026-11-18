@@ -40,7 +40,7 @@ standards/
 The core standard is the starting point for every language. A language standard only writes down what is specific to it.
 
 1. **Declare the base.** The header names the core version it extends, for example `Extends: core/source 0.2.0`.
-2. **Every core rule applies unless overridden.** Rules have stable IDs (`CS-REC-1`, `CT-UNI-2`, `VM-LEX-1`). A language standard doesn't restate rules it accepts.
+2. **Every core rule applies unless overridden.** Rules have stable IDs (`CS-REC-1`, `CT-UNI-2`). A language standard doesn't restate rules it accepts. The [value model](core/VALUE-MODEL.md) (`VM-*`) is never overridden: it defines what `.sets` text means.
 3. **Rules have one of two classes:**
    - **Invariant**: can't be overridden. These rules keep `.sets` a shared boundary (disjoint axioms, no flattening, no unknown domains, deterministic output, no silent under-approximation, and so on). If a language seems to need an exception, that's a Spec Issue for core, not an override.
    - **Default**: can be overridden. The language standard lists each override in an **Overrides** table with the rule ID, the replacement rule, and the reason.
