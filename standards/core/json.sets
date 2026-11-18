@@ -14,7 +14,7 @@ String in base
 union in base
 
 // JSON strings as core strings. A text whose escapes spell a lone
-// surrogate isn't a String (VALUE-MODEL.md §4); a view that keeps those declares
+// surrogate isn't a String (CS-STR-1); a view that keeps those declares
 // its own described domain.
 JsonString = String
 

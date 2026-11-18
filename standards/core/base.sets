@@ -34,7 +34,7 @@ difference({A sub U}, {B sub U}): { x suchthat x in A and x not in B }
 product2({A sub U}, {B sub U}): { (x, y) suchthat x in A and y in B }
 
 // ---------------------------------------------------------------------
-// Top-level axioms. These are pairwise disjoint (VM-AX-1).
+// Top-level axioms. These are pairwise disjoint (GUIDE "Top domain axiom").
 // ---------------------------------------------------------------------
 
 String
@@ -44,7 +44,7 @@ Fractional
 Real = union(Integer, Fractional)
 
 // ---------------------------------------------------------------------
-// Atom rosters (VM-AX-3, CS-SCA-1). A nullable domain is
+// Atom rosters (CS-SCA-1). A nullable domain is
 // union(T, {Nothing}); there's no null atom (VM-AX-5).
 // ---------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ Uint32 = { x suchthat x in Integer and x >= 0 and x <= 4294967295 }
 Uint64 = { x suchthat x in Integer and x >= 0 and x <= 18446744073709551615 }
 
 // Finite IEEE-754 values: m * 2 ^ e within the format's bounds.
-// m and e are rule-local binders (VM-RULE-2). A whole number has both
+// m and e are rule-local binders, existential over the rule. A whole number has both
 // forms here (2 and 2.0), because e >= 0 gives an Integer and e < 0 a
 // Fractional (VM-SUB-0, "Both forms").
 Binary64Finite = {

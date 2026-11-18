@@ -71,15 +71,15 @@ Runtime-only types aren't values of any view. They map to their runtime concept 
 
 **CS-CONV-3 (Default). Domain names.** A named source type becomes a domain of the same name. A character that can't appear bare in a symbol, such as a separator (`,`, `{`, `}`), is escaped (VM-LEX-6); the escaped symbol is still that domain's name (VM-LEX-4). When the name is already taken:
 - If the source type has the same structure as the domain in scope, it is that domain and nothing new is declared (VM-PRES-2). JavaScript's `String` is `String` from `base`.
-- Otherwise the language standard renames it. That covers a name already in scope (VM-NAME-1: a `base` name, an imported name such as `Async` from `runtime`, an earlier declaration) and two source types in one module that would get the same name.
+- Otherwise the language standard renames it. That covers a name already in scope (a `base` name, an imported name such as `Async` from `runtime`, an earlier declaration) and two source types in one module that would get the same name.
 
 **CS-CONV-5 (Invariant). Binder names.** The record binder is `r`. Each field's value binder is the key's spelling when that's a valid symbol and doesn't collide with `r` or a domain in scope; otherwise it's `_` followed by the key spelling with reserved characters escaped. Binders in other builders are `x`, `y`, `z`, then `x1`, `x2`, …. Binders are scoped symbols, so this rule only exists to make outputs comparable.
 
-**CS-CONV-6 (Invariant). Rule shape.** Rules follow boolean algebra (VM-RULE-1). Adapters write rules inline and add grouping parentheses (VM-RULE-1a) only where precedence alone would read differently: `(A or B) and C` needs them; `A and B or C and D` doesn't. Adapters don't add redundant parentheses, so output stays comparable.
+**CS-CONV-6 (Invariant). Rule shape.** Rules follow boolean algebra (GUIDE). Adapters write rules inline and add grouping parentheses only where precedence alone would read differently: `(A or B) and C` needs them; `A and B or C and D` doesn't. Adapters don't add redundant parentheses, so output stays comparable.
 
 ## 3. Axioms
 
-**CS-AX-1 (Invariant). Reuse `base`; new axioms only for new values.** Scalars map to `base` axioms and described subdomains whenever the prose meaning matches (VALUE-MODEL §4–§5). Values that exist in `base` (dates, UUIDs, decimals) are described subdomains of `base` domains, because a new axiom would be disjoint from them (VM-AX-8). A language standard declares a new top-level axiom only for values no `base` domain contains. Runtime-only types aren't values and never become axioms (VM-PRES-3).
+**CS-AX-1 (Invariant). Reuse `base`; new axioms only for new values.** Scalars map to `base` axioms and described subdomains whenever the prose meaning matches (VALUE-MODEL §5; CS-STR-1; number axioms, pending). Values that exist in `base` (dates, UUIDs, decimals) are described subdomains of `base` domains, because a new axiom would be disjoint from them (GUIDE, "Top domain axiom"). A language standard declares a new top-level axiom only for values no `base` domain contains. Runtime-only types aren't values and never become axioms (VM-PRES-3).
 
 **CS-AX-2 (Invariant). Disjointness check.** Before declaring an axiom, the language standard shows that no value of the new axiom is a value of an existing axiom. If two of the language's types share values (`int` and `float` both hold `1`), they're described subdomains of one axiom, or unions of axioms, never two axioms.
 
@@ -125,7 +125,7 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 
 ### 5.1 Scalars
 
-**CS-SCA-1 (Invariant).** A scalar type maps to the narrowest `base` domain whose prose extent equals the type's extent in the view. The mapping keeps every distinction the view makes (VM-PRES-1): a view that tells integers from fractions keeps `Integer` and `Fractional` apart (VM-AX-2). Which form a number takes is fixed by the view: a binary64 `1.0` is the `Fractional` `1.0` where the view keeps the distinction, and the `Integer` `1` where it doesn't (UP-1).
+**CS-SCA-1 (Invariant).** A scalar type maps to the narrowest `base` domain whose prose extent equals the type's extent in the view. The mapping keeps every distinction the view makes (VM-PRES-1): a view that tells integers from fractions keeps `Integer` and `Fractional` apart (number axioms, pending). Which form a number takes is fixed by the view: a binary64 `1.0` is the `Fractional` `1.0` where the view keeps the distinction, and the `Integer` `1` where it doesn't (UP-1).
 
 | Abstract construct | Canonical `.sets` |
 | ------------------ | ----------------- |
