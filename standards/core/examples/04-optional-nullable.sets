@@ -1,0 +1,28 @@
+// 04-optional-nullable: missing fields, null, and both.
+// Rules: VM-MISS-*, VM-AX-5, CS-OPT-1, CS-OPT-2, CS-OPT-3, CT-OPT-*
+//
+// Abstract source:  Profile = { avatar: text | null, bio?: text, nick?: text | null }   (closed)
+
+Nothing in base
+OnlyKeys in base
+OptionalField in base
+Record in base
+String in base
+U in base
+union in base
+
+Profile = {
+    r suchthat
+    r in Record and
+    ("avatar", avatar) in r and avatar in union(String, {Nothing}) and
+    r in OptionalField("bio", String) and
+    r in OptionalField("nick", union(String, {Nothing})) and
+    r in OnlyKeys({"avatar", "bio", "nick"})
+}
+
+// member:      {("avatar", Nothing)}
+// member:      {("avatar", "a.png"), ("bio", "hi"), ("nick", Nothing)}
+// member:      {("avatar", Nothing), ("nick", "x")}
+// non-member:  {}                                                       avatar is nullable, not optional
+// non-member:  {("avatar", Nothing), ("bio", Nothing)}                  bio is optional, not nullable
+// Round trip must keep nick's three states apart: missing, null, "x" (CT-OPT-3).

@@ -1,0 +1,32 @@
+// 08-tagged-union: a tag inside the value.
+// Rules: CS-TAG-1, CT-DISJ-1 (rule 4), CT-UNI-1
+//
+// Abstract source:
+//   Event = { kind: "click", x: int } | { kind: "key", code: text }     (tag inside the record)
+//
+// Core has no variant encoding. Other tag placements (externally or
+// adjacently tagged, bare tags) are written with records, tuples and atoms
+// as each language standard defines (CS-TAG-1, VM-PRES-2).
+
+Integer in base
+Record in base
+String in base
+U in base
+union in base
+
+Click = {
+    r suchthat
+    r in Record and
+    ("kind", kind) in r and kind in {"click"} and
+    ("x", x) in r and x in Integer
+}
+Key = {
+    r suchthat
+    r in Record and
+    ("code", code) in r and code in String and
+    ("kind", kind) in r and kind in {"key"}
+}
+Event = union(Click, Key)              // disjoint: both require "kind" with disjoint values (CT-DISJ-1 rule 4)
+
+// Event  member: {("kind", "click"), ("x", 3)}
+//        non-member: {("kind", "key"), ("x", 3)}        Key requires "code"; Click requires kind "click"

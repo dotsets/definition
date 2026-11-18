@@ -1,0 +1,36 @@
+// Prelude of the TS -> .sets standard (iteration 2, 0.2.0). Normative.
+// Assumes base is in scope. The base names used here and their assumed
+// meanings: String, Integer, Fractional, Boolean, Nothing, Float64,
+// NotANumber, Record, Map, Seq, SetOf, OptionalField, union, intersect.
+
+// New axioms (VM-AX-7): runtime handles that no base domain holds.
+TsSymbol
+TsFunction
+
+// undefined, a second kind of absence next to Nothing (TS-VAL-4).
+TsUndefined = {undefined}
+
+// number (TS-VAL-2). Whole numbers appear only in Integer form.
+TsWholeFractional = { y suchthat y in Fractional and z in Integer and y >= z and y <= z }
+TsNumber = { x suchthat x in Float64 and x not in TsWholeFractional }
+
+// Object keys and records (TS-OBJ-1).
+TsKey = String
+TsRecord = Map(TsKey, U)
+
+// Exact members: the strings that JavaScript's String(n) returns for some
+// number n, for example "0", "-1", "1.5", "1e+21", "NaN", "Infinity",
+// "-Infinity". String(-0) is "0", so "-0" isn't a member.
+TsNumericKey sub String
+
+// Date (TS-VAL-7): its time value, whole milliseconds within +-8.64e15, or NaN.
+TsDate = union(
+    { x suchthat x in TsNumber and x in Integer and x >= -8640000000000000 and x <= 8640000000000000 },
+    {NotANumber}
+)
+
+// Top types (TS-PRIM-1).
+TsPrimitive = union(String, union(TsNumber, union(Integer, union(Boolean, union(TsSymbol, union({Nothing}, TsUndefined))))))
+TsValue = union(TsPrimitive, union(Map(TsValue, TsValue), union(Seq(TsValue), union(SetOf(TsValue), TsFunction))))
+TsObject = { x suchthat x in TsValue and x not in TsPrimitive }
+TsNonNullish = { x suchthat x in TsValue and x not in {Nothing} and x not in TsUndefined }

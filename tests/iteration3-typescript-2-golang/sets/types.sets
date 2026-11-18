@@ -1,0 +1,281 @@
+// types.sets
+//
+// Domains transpiled from one source file. The block numbers are the source's.
+// Read this file with the value model and with prelude.sets.
+//
+// Scope. A name that this file uses and does not declare comes from base
+// (U, String, Integer, Boolean, Nothing, Seq, union, intersect, OptionalField,
+// OptionalFields) or from prelude.sets. The lines below bring in the prelude
+// names, in the value model's "X in file" form.
+//
+// Notes. Comments carry no meaning in a domain. These five kinds tell a
+// target's author something the domains cannot say:
+//   Overlap:   two different things in the source are one value here, so a
+//              target cannot tell them apart
+//   Names:     the source's names for the members of a roster, in roster order
+//   Default:   the argument the source fills in when a call leaves it out
+//   Not data:  something the source declares that is behavior; it is not here
+//   Extent:    the exact members of a described subdomain
+//
+// Records. Every record domain here is open: a member may carry String keys
+// that the domain does not name. Nothing here is closed with OnlyKeys.
+//
+// Overlap, for every domain in this file: the source can hold the same fields
+// in more than one kind of record, and it can leave a position of a sequence
+// empty instead of putting unset there. Each pair is one value here. A field
+// in a Callable domain holds a placeholder that stands for any routine of
+// that shape. A field that a record does not name can hold any value, so the
+// overlaps listed at EmptyThings (block 13) can occur inside it.
+
+Double in prelude
+Unset in prelude
+EpochMillis in prelude
+FiniteSet in prelude
+FiniteMap in prelude
+Object in prelude
+NumericKey in prelude
+Composite in prelude
+Something in prelude
+Anything in prelude
+Callable in prelude
+
+
+// ---------------------------------------------------------------------------
+// 1. Scalars and number literals
+// ---------------------------------------------------------------------------
+
+Id = String
+
+Count = Double
+
+// A whole number of any size.
+Big = Integer
+
+// The stored numbers nearest to 3.14 and to 0.1, written exactly.
+Pi = {3.140000000000000124344978758017532527446746826171875}
+
+Tenth = {0.1000000000000000055511151231257827021181583404541015625}
+
+// Overlap: One and OneN are the same domain. The source draws One from Double
+// and OneN from Integer, and the number 1 is one value in both.
+One = {1}
+
+OneN = {1}
+
+
+// ---------------------------------------------------------------------------
+// 2. Rosters
+// ---------------------------------------------------------------------------
+
+Status = {"active", "suspended", "deleted"}
+
+// Names: Red, Green
+Color = {"RED", "GREEN"}
+
+// Names: Low, Mid, High
+Level = {0, 1, 2}
+
+
+// ---------------------------------------------------------------------------
+// 3. A record with optional, nullable, sequence and instant fields
+// ---------------------------------------------------------------------------
+
+// "age" may be missing, or be there and hold unset. It never holds Nothing.
+// "email" is always there, and holds a String or Nothing.
+User = {
+    r suchthat
+    r in Object and
+    ("id", id) in r and id in Id and
+    ("name", name) in r and name in String and
+    r in OptionalField("age", union(Double, Unset)) and
+    ("email", email) in r and email in union(String, {Nothing}) and
+    ("tags", tags) in r and tags in Seq(String) and
+    ("createdAt", createdAt) in r and createdAt in EpochMillis
+}
+
+
+// ---------------------------------------------------------------------------
+// 4. A union told apart by one field
+// ---------------------------------------------------------------------------
+
+// The value of "kind" says which branch a member is in.
+Shape = union({
+    r suchthat
+    r in Object and
+    ("kind", kind) in r and kind in {"circle"} and
+    ("radius", radius) in r and radius in Double
+}, {
+    r suchthat
+    r in Object and
+    ("kind", kind) in r and kind in {"rect"} and
+    ("w", w) in r and w in Double and
+    ("h", h) in r and h in Double
+})
+
+
+// ---------------------------------------------------------------------------
+// 5. Sequences of a fixed shape
+// ---------------------------------------------------------------------------
+
+// These are sequences, so each is inside a Seq: Point is inside Seq(Double).
+
+// Exactly two elements.
+Point = { (e0, (e1, ())) suchthat e0 in Double and e1 in Double }
+
+// One or two elements. The second, when it is there, may be unset.
+Span = union({
+    (start, ()) suchthat start in Double
+}, {
+    (start, (end, ())) suchthat start in Double and end in union(Double, Unset)
+})
+
+// One String, then any number of Doubles.
+Args = { (e0, rest) suchthat e0 in String and rest in Seq(Double) }
+
+
+// ---------------------------------------------------------------------------
+// 6. Tables, and records with a rule for many keys
+// ---------------------------------------------------------------------------
+
+// A table from Strings to Doubles.
+Dictionary = FiniteMap(String, Double)
+
+// Every key that is a NumericKey has a String value. Other keys are open.
+ByIndex = { r suchthat r in Object and r in OptionalFields(NumericKey, String) }
+
+// Every value is a String, and the key "contentType" is required.
+Headers = {
+    r suchthat
+    r in FiniteMap(String, String) and
+    ("contentType", contentType) in r and contentType in String
+}
+
+Flags = {
+    r suchthat
+    r in Object and
+    ("read", read) in r and read in Boolean and
+    ("write", write) in r and write in Boolean
+}
+
+
+// ---------------------------------------------------------------------------
+// 7. Domains with parameters
+// ---------------------------------------------------------------------------
+
+Box({T sub U}): { r suchthat r in Object and ("value", value) in r and value in T }
+
+// Default: E is String. A call that gives only T means Result(T, String).
+// The value of "ok" says which branch a member is in.
+Result({T sub U}, {E sub U}): union({
+    r suchthat
+    r in Object and
+    ("ok", ok) in r and ok in {true} and
+    ("value", value) in r and value in T
+}, {
+    r suchthat
+    r in Object and
+    ("ok", ok) in r and ok in {false} and
+    ("error", error) in r and error in E
+})
+
+Page({T sub Composite}): {
+    r suchthat
+    r in Object and
+    ("items", items) in r and items in Seq(T) and
+    ("next", next) in r and next in union(String, {Nothing})
+}
+
+UserPage = Page(User)
+
+
+// ---------------------------------------------------------------------------
+// 8. Recursion
+// ---------------------------------------------------------------------------
+
+Tree({T sub U}): {
+    r suchthat
+    r in Object and
+    ("value", value) in r and value in T and
+    ("children", children) in r and children in Seq(Tree(T))
+}
+
+// Overlap: the last two branches share one member, {}. An empty sequence and
+// an empty table are the same value.
+// The name Json is the source's own name for this domain.
+Json = union(String, union(Double, union(Boolean, union({Nothing}, union(Seq(Json), FiniteMap(String, Json))))))
+
+
+// ---------------------------------------------------------------------------
+// 9. Sets and maps
+// ---------------------------------------------------------------------------
+
+TagSet = FiniteSet(String)
+
+// Overlap: Scores is the same domain as Dictionary. The source keeps the two
+// in different kinds of container, and the pairs they hold are the same.
+Scores = FiniteMap(String, Double)
+
+
+// ---------------------------------------------------------------------------
+// 10. Intersection
+// ---------------------------------------------------------------------------
+
+Timestamped = { r suchthat r in Object and ("updatedAt", updatedAt) in r and updatedAt in EpochMillis }
+
+// Every member has the fields of both.
+AuditedUser = intersect(User, Timestamped)
+
+
+// ---------------------------------------------------------------------------
+// 11. Text with a fixed beginning
+// ---------------------------------------------------------------------------
+
+// Extent: a String is a member exactly when it begins with the five characters
+// u, s, e, r, - in that order. Any String may follow them, the empty one too.
+//   members:      "user-"   "user-1"   "user-a b"
+//   not members:  "user"   "User-1"   "xuser-1"   ""
+UserKey sub String
+
+
+// ---------------------------------------------------------------------------
+// 12. A record with a runtime field
+// ---------------------------------------------------------------------------
+
+// "onChange" holds a routine that is called with one Double and gives nothing
+// back. It is not data (see Callable in prelude.sets).
+// Not data: the source also declares a routine named deposit on this record,
+// called with one Double and giving nothing back. It is behavior.
+Account = {
+    r suchthat
+    r in Object and
+    ("id", id) in r and id in String and
+    ("balance", balance) in r and balance in Double and
+    ("onChange", onChange) in r and onChange in Callable({ (n, ()) suchthat n in Double }, Unset)
+}
+
+
+// ---------------------------------------------------------------------------
+// 13. Unions whose branches meet
+// ---------------------------------------------------------------------------
+
+// The source wrote two branches: the two-element shape of Point, and
+// Seq(Double). The first is inside the second and is left out.
+Ambiguous = Seq(Double)
+
+// The source wrote union(Something, union({Nothing}, Unset)). That is the
+// definition of Anything.
+// Overlap: this domain admits every value, so every pair that is one value
+// in this folder meets in it: an empty sequence, set, table and record; a
+// whole number drawn from Integer and from Double; an instant and a number;
+// a table and a record with the same pairs.
+EmptyThings = Anything
+
+// The source wrote the Unset branch twice. It is written once.
+Nullish = union({Nothing}, Unset)
+
+// Overlap: the two branches share one member, {}. The empty set and the empty
+// table are the same value. Every other member is in exactly one branch: a
+// set of Strings holds no pairs, and a table holds nothing else.
+// The values of the second branch are Something, so the overlaps listed at
+// EmptyThings apply to them too.
+SetOrDict = union(FiniteSet(String), FiniteMap(String, Something))

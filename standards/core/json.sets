@@ -1,0 +1,31 @@
+// json.sets: the `json` superdomain.
+//
+// JSON describes no domains; a JSON text is a value of JSON's own fixed
+// domains, written here once. A language standard whose view is JSON
+// imports its view domain from this file (`JsonValue in json`, CS-SCOPE-1).
+// How a language reads and writes JSON is that language standard's business.
+
+Binary64Finite in base
+Boolean in base
+Map in base
+Nothing in base
+Seq in base
+String in base
+union in base
+
+// JSON strings as core strings. A text whose escapes spell a lone
+// surrogate isn't a String (VALUE-MODEL.md §4); a view that keeps those declares
+// its own described domain.
+JsonString = String
+
+// JSON numbers as most JSON codecs read them (RFC 8259 §6, binary64).
+// 1 and 1.0 are both members and stay distinct (VM-EQ-1);
+// a view that merges them says so in its View field.
+JsonNumber = Binary64Finite
+
+JsonBoolean = Boolean
+JsonNull = {Nothing}
+JsonArray = Seq(JsonValue)
+JsonObject = Map(String, JsonValue)
+
+JsonValue = union(JsonString, union(JsonNumber, union(JsonBoolean, union(JsonNull, union(JsonArray, JsonObject)))))
