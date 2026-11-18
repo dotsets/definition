@@ -70,7 +70,7 @@ Runtime-only types aren't values of any view. They map to their runtime concept 
 **CS-CONV-1 (Invariant). Imports.** An emitted file imports every symbol it uses and its view domain (CS-SCOPE-1), and nothing else. A core-view file imports `U in base`; a JSON-view file imports `JsonValue in json`, whether or not a declaration uses it. Every domain a file references is declared in it, written inline, or imported; no symbol is built in, `U` included (GUIDE, "Domain Validation").
 
 **CS-CONV-3 (Default). Domain names.** A named source type becomes a domain of the same name. A character that can't appear bare in a symbol, such as a separator (`,`, `{`, `}`), is escaped (VM-LEX-6); the escaped symbol is still that domain's name (VM-LEX-4). When the name is already taken:
-- If the source type describes the same domain as the one in scope, it is that domain and nothing new is declared (VM-PRES-2, "Collisions"). JavaScript's `String` is `String` from `base`.
+- If the source type has the same structure as the domain in scope, it is that domain and nothing new is declared (VM-PRES-2). JavaScript's `String` is `String` from `base`.
 - Otherwise the language standard renames it. That covers a name already in scope (VM-NAME-1: a `base` name, an imported name such as `Async` from `runtime`, an earlier declaration) and two source types in one module that would get the same name.
 
 **CS-CONV-5 (Invariant). Binder names.** The record binder is `r`. Each field's value binder is the key's spelling when that's a valid symbol and doesn't collide with `r` or a domain in scope; otherwise it's `_` followed by the key spelling with reserved characters escaped. Binders in other builders are `x`, `y`, `z`, then `x1`, `x2`, …. Binders are scoped symbols, so this rule only exists to make outputs comparable.
@@ -84,6 +84,21 @@ Runtime-only types aren't values of any view. They map to their runtime concept 
 **CS-AX-2 (Invariant). Disjointness check.** Before declaring an axiom, the language standard shows that no value of the new axiom is a value of an existing axiom. If two of the language's types share values (`int` and `float` both hold `1`), they're described subdomains of one axiom, or unions of axioms, never two axioms.
 
 **CS-AX-3 (Default). Language superdomain.** Language-specific domains go in `<language>.sets`. That file imports from `base` and redefines nothing it provides.
+
+**CS-STR-1 (Invariant). String.** The `base` axiom `String` is every finite sequence of Unicode scalar values (U+0000–U+D7FF, U+E000–U+10FFFF), including the empty string. Surrogate code points aren't string content.
+
+**CS-STR-2 (Invariant). Quoted atoms are strings.** An atom (VM-LEX-3) that starts and ends with an unescaped `"` encodes a member of `String`: the characters between the quotes, with escapes decoded (VM-LEX-6). `"Succeeded"` encodes the string `Succeeded`, and `""` the empty string. No other atom is a `String`, so `Succeeded` isn't one.
+
+Inside a symbol, every unescaped `"` must be closed by another one:
+- `"a\"b"` is the string `a"b`.
+- `a\"b` is the atom `a"b`, not a string.
+- `a"b` is an error: its `"` is never closed.
+
+Separators are escaped the same way, inside quotes or not, because the grammar layer doesn't know about quotes (VM-LEX-0):
+- `{"a\, b"}` is one string, `a, b`.
+- `{"a, b"}` is an error: the grammar layer splits it into `"a` and ` b"`, and neither has a closing quote.
+
+**CS-STR-3 (Invariant). Char.** The `base` described subdomain `Char sub String` holds the strings of exactly one Unicode scalar value. (It becomes a builder once a string-length operator exists, VM-SUB-1.)
 
 **CS-AX-4 (Default). Described subdomains.** A language standard writes further ranged domains as builders (VM-SUB-0), and declares the remaining described subdomains in its superdomain (CS-AX-3) with the `sub` form (`Uuid sub String`, `Rfc3339Timestamp sub String`). Each one needs a prose extent precise enough to write a membership check from. The language standard owns them the way `base` owns its own (VM-SUB-1): it states how they overlap, and prose that contradicts a subdomain's `sub` parent is a defect in that standard. How it describes a domain (prose, builder or structured value, VM-SUB-3) is its own choice.
 
@@ -100,7 +115,7 @@ Runtime-only types aren't values of any view. They map to their runtime concept 
 | Recursion | Self-reference by name. | VM-RECUR-1, CS-RECUR-1 |
 | Variable-length collections | `Seq`, `SetOf` and `Map` from `base`. | CS-COL-* |
 | Modules | One superdomain file per module; imports become `X in module`. | CS-MOD-* |
-| Wrapper types | Narrowed to the fundamental domains they wrap. | VM-PRES-2, CS-WRAP-1 |
+| Wrapper types | Mapped to the structure they wrap. | VM-PRES-2, CS-WRAP-1 |
 
 **Why open records by default.** With open records, README's `Human` is simply `union(Person, Aged)`: `{name: "abc", age: 123}` is a `Person` (it has a `name`) and an `Aged` (it has an `age`), so it's in the union. The visually similar mapping is also the correct one, and no merged rewrite is needed. Languages whose view rejects unknown keys add `OnlyKeys`, and then the same `union` means "exactly one shape".
 
@@ -141,13 +156,13 @@ Each rule gives the abstract source construct, the canonical `.sets`, edge cases
 
 **CS-LIT-2 (Invariant).** A union of literal types is one roster in source order: `"a" | "b" | 3` → `{"a", "b", 3}`.
 
-**CS-ENUM-1 (Default).** An enumeration maps by its value in the view. If members carry string values, they're quoted strings: `{"Succeeded", "Failed"}`. If they carry numbers, they're numeric symbols. If the members are values in their own right with no underlying string or number (Rust unit variants, sealed singletons), they're atoms: `{Succeeded, Failed}`.
+**CS-ENUM-1 (Default).** An enumeration maps by its value in the view. If members carry string values, they're quoted strings: `{"Succeeded", "Failed"}`. If they carry numbers, they're numeric symbols. If the members are values in their own right with no underlying string or number (Rust unit variants, sealed singletons), they're unquoted atoms: `{Succeeded, Failed}`.
 
 **CS-NUM-3 (Default).** A numeric literal is written in a notation that spells its value exactly, in the same form (VM-LEX-2). Every binary64 value has an exact hexadecimal float, and an exact decimal.
 
 **Edge cases.** A literal that spells a domain name in scope becomes `"Number"` as a string or `\Number` as an atom (VM-LEX-4). The empty roster is `Phi`, not `{}` (CS-TOP-2).
 
-**Rationale.** Writing enumerations as quoted strings by default would merge atoms and strings, a distinction the language keeps (VM-PRES-1).
+**Rationale.** Writing enumerations as quoted strings by default would turn values that aren't strings into strings, a distinction the language keeps (VM-PRES-1).
 
 **Example:** [`examples/02-rosters.sets`](../examples/02-rosters.sets)
 
@@ -224,7 +239,7 @@ Human = union(Person, Aged)
 
 ### 5.7 Tagged unions
 
-**CS-TAG-1 (Invariant).** A sum type whose variants are distinguishable in the value maps to `union` of its variants in source order. Core has no variant encoding; each variant is written with fundamentals (records, tuples, atoms) in the shape the view gives it (VM-PRES-2):
+**CS-TAG-1 (Invariant).** A sum type whose variants are distinguishable in the value maps to `union` of its variants in source order. Core has no variant encoding; each variant is written as the structure the view gives it: a record, a tuple or an atom (VM-PRES-2):
 - When the view embeds the tag in a record (internally tagged JSON, `{"kind": "circle", "r": 1}`), the variant is a record whose tag field has a singleton domain: `("kind", kind) in r and kind in {"circle"}`.
 - For other shapes (externally or adjacently tagged, a bare tag without payload), the language standard defines the encoding.
 
@@ -256,11 +271,11 @@ Human = union(Person, Aged)
 
 ### 5.11 Aliases, nominal types and brands
 
-**CS-NOM-1 (Invariant). Names don't create values.** `type A = B` → `A = B`. A nominal newtype (`type Celsius float64`, `struct Meters(f64)` when serialized transparently) whose values are indistinguishable from its base in the view is also `A = B`. The adapter doesn't invent a disjoint axiom to model nominality.
+**CS-NOM-1 (Invariant). Names don't create values.** `type A = B` → `A = B`. A nominal newtype (`type Celsius float64`, `struct Meters(f64)` when serialized transparently) whose values are indistinguishable from its base in the view is also `A = B`. The adapter doesn't invent a disjoint axiom to model nominality. Two source types with the same structure keep their own names, never merged into one declaration: `type UserId = string` and `type Email = string` → `UserId = String` and `Email = String` (VM-PRES-2).
 
 **CS-NOM-2 (Invariant). Brands that exist in the value are part of it.** If the view carries the type's identity (a type tag, a class discriminator), that tag is a field or a variant tag, per CS-TAG-1.
 
-**CS-WRAP-1 (Invariant). Wrappers narrow to fundamentals.** A class or library type that wraps a fundamental domain (a set over an object, a date over a number or string, a boxed big integer) maps to the fundamental it wraps in the view (VM-PRES-2). Core has no rule for any particular wrapper; the language standard names its wrappers and their fundamentals.
+**CS-WRAP-1 (Invariant). Wrappers map to the structure they wrap.** A class or library type that wraps another structure (a set over an object, a date over a number or string, a boxed big integer) maps to that structure in the view (VM-PRES-2). Core has no rule for any particular wrapper; the language standard names its wrappers and the structure each one holds.
 
 **CS-NOM-3 (Default). Phantom brands are dropped.** A compile-time-only brand (`string & {__brand: "Id"}`) has no runtime value, so it maps to its base domain. The language standard can override this when its toolchain needs brands back. It does so with a described subdomain with no prose extent (`UserId sub String`, which GUIDE reads as the same as `String`), never with an axiom.
 
@@ -338,7 +353,7 @@ NonEmptyString = difference(String, {""})
 | Lists, sets, maps, index signatures | mapped | CS-COL-1 |
 | Fixed fields plus an index signature | mapped when fixed values fit `V`; otherwise gap (G-3) | CS-COL-2 |
 | Aliases, newtypes, brands | mapped | CS-NOM-* |
-| Wrapper types | mapped to the wrapped fundamental | CS-WRAP-1 |
+| Wrapper types | mapped to the wrapped structure | CS-WRAP-1 |
 | Generics, bounds | mapped | CS-GEN-1, CS-GEN-2 |
 | Type-level computation | mapped by evaluation | CS-GEN-3 |
 | Recursive types | mapped | CS-RECUR-1 |

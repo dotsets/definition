@@ -13,7 +13,7 @@ The two sides never refer to each other. A target standard doesn't assume any pa
 
 Two principles from the [core value model](core/VALUE-MODEL.md) shape every standard:
 - **Preserve the domain** (VM-PRES-1). A source standard keeps every distinction its language makes. A target standard may merge distinctions it can't represent, but it can't recover one the source never wrote down, so language standards merge and never invent.
-- **Fundamental domains only** (VM-PRES-2). `.sets` describes the data structures themselves. Wrapper types (a JavaScript `Set`, a `Date` class) narrow to the fundamentals they wrap, and each language standard defines its own wrappers.
+- **Preserve the structure** (VM-PRES-2). How data is structured doesn't change between languages, so a type maps to the structure of its values (fields and values, ordered elements, members), not to the construct the source uses. Wrapper types (a JavaScript `Set`, a `Date` class) map to the structure they wrap, and each language standard states the structure of its own types. Two source types with the same structure are the same domain under two names.
 - **Runtime domains aren't data** (VM-PRES-3). A type that exists only while a program runs (a promise, a lock) maps to a tagged runtime concept from [RUNTIME.md](core/RUNTIME.md), named by the concept, never by the source spelling.
 
 ## Layout

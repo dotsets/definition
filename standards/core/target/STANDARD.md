@@ -126,7 +126,7 @@ Language standards instantiate these abstract representations. Rules in §5 are 
 
 ## 3. Axiom bindings
 
-**CT-AXB-1 (Invariant). Bind by meaning.** Each language standard fills this table for its target. A domain is bound by its prose in VALUE-MODEL (or in the superdomain that declares it), never by the file it came from. The "Required exactness" column is the minimum a binding must reach without a `CT-D-UNDER` diagnostic.
+**CT-AXB-1 (Invariant). Bind by meaning.** Each language standard fills this table for its target. A domain is bound by its prose in VALUE-MODEL, in the core source standard for `String` and `Char` (CS-STR-1, CS-STR-3), or in the superdomain that declares it, never by the file it came from. The "Required exactness" column is the minimum a binding must reach without a `CT-D-UNDER` diagnostic.
 
 | Domain (`base`) | Denotes | Required exactness | Check when over |
 | --------------- | ------- | ------------------ | --------------- |
@@ -182,7 +182,7 @@ Each rule states its exactness. Examples live in [`../examples/`](../examples/):
 
 ### 5.2 Rosters
 
-**CT-ROS-1 (Invariant). One-kind rosters.** A roster whose members are all strings, all atoms, or all numbers becomes `Enum` (exact). The codec writes each member's exact value (CT-NAME-3).
+**CT-ROS-1 (Invariant). One-kind rosters.** A roster whose members are all strings (CS-STR-2), all unquoted atoms, or all numbers becomes `Enum` (exact). The codec writes each member's exact value (CT-NAME-3).
 
 **CT-ROS-2 (Invariant). Mixed rosters.** A roster with members of several kinds becomes `Sum` of one `Enum` per kind, in the order each kind first appears (exact). If two members project to the same wire value (`Circle` and `"Circle"`), the adapter reports `CT-D-WIRE-AMBIGUOUS`.
 
@@ -246,7 +246,7 @@ Keys are pairwise distinct. The representation is `Record(k: R(V) … )`, with o
 ### 5.7 Unions
 
 **CT-DISJ-1 (Invariant). Disjointness.** The adapter proves two domains `A` and `B` disjoint when any of these holds. Otherwise it assumes they overlap.
-1. Their members have different kinds (VM-KIND-1): string, number, atom, tuple, domain.
+1. Their members have different kinds (VM-KIND-1): number, atom, tuple, domain; or one holds only strings (quoted atoms, CS-STR-2) and the other only unquoted atoms.
 2. Both are tuples of different arity.
 3. Both are records, one requires key `k`, and the other is closed with `OnlyKeys` that excludes `k`.
 4. Both are records that require the same key `k` with provably disjoint value domains (this is how tag fields discriminate).
@@ -299,7 +299,7 @@ This is the README Go `Human`, with `Person` and `Aged` as views over one record
 
 **CT-COL-3 (Default).** `Map(K, V)` becomes `Dict(R(K), R(V))` when `R(K)` can be a native key (exact). Otherwise it's `Checked(List(Tuple(R(K), R(V))), unique keys)` (over + check).
 
-**CT-COL-4 (Default). Wrapper types.** A language standard may represent a fundamental domain with a wrapper type when the wrapper holds exactly that domain (VM-PRES-2): JavaScript's `Set` for a record of keys with `()` values, or a date class for a timestamp string. The wrapper is a representation choice; the domain stays the fundamental. The empty value `()` binds to the target's own nothing-like unit, such as Go's `struct{}{}`.
+**CT-COL-4 (Default). Wrapper types.** A language standard may represent a domain with a wrapper type when the wrapper holds exactly that domain's structure (VM-PRES-2): JavaScript's `Set` for a record of keys with `()` values, or a date class for a timestamp string. The wrapper is a representation choice; the domain doesn't change. The empty value `()` binds to the target's own nothing-like unit, such as Go's `struct{}{}`.
 
 **Example:** [`examples/10-collections.sets`](../examples/10-collections.sets)
 

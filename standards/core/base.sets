@@ -5,8 +5,8 @@
 // these symbols special (GUIDE, "`.sets` files are superdomains").
 //
 // Source adapters reuse these domains; target adapters bind them by the
-// meaning given in standards/core/VALUE-MODEL.md, never by the language a
-// file came from.
+// meaning given in standards/core/VALUE-MODEL.md (String and Char: the core
+// source standard, CS-STR-*), never by the language a file came from.
 
 // ---------------------------------------------------------------------
 // Universal and empty domains (GUIDE "universal domain", "phi").
@@ -91,7 +91,8 @@ Float32 = union(Binary32Finite, IEEESpecial)
 // ---------------------------------------------------------------------
 // Described subdomains. `X sub Y` declares X with members drawn from Y
 // (GUIDE "Difference between `sub` and `in` in this context");
-// VALUE-MODEL.md §5 fixes exactly which members of Y belong to X.
+// VALUE-MODEL.md §5 fixes exactly which members of Y belong to X
+// (Char: core source standard, CS-STR-3).
 // ---------------------------------------------------------------------
 
 Char sub String
