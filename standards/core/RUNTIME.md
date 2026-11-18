@@ -2,7 +2,7 @@
 
 - **Standard version:** 0.2.0
 - **Targets `.sets` spec at commit:** `f5a56cc` (`GUIDE.md`)
-- **Depends on:** [core source standard](source/STANDARD.md) (VM-PRES-3), [`base.sets`](base.sets) (`Tagged`)
+- **Depends on:** [Core Value Model](VALUE-MODEL.md) (VM-PRES-3), [`base.sets`](base.sets) (`Tagged`)
 - **Declares:** [`runtime.sets`](runtime.sets), the `runtime` superdomain
 - **Status:** draft
 - **Used by:** [core source standard](source/STANDARD.md), [core target standard](target/STANDARD.md), and every language standard

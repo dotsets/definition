@@ -52,7 +52,7 @@ Boolean = {true, false}
 IEEESpecial = {NotANumber, PositiveInfinity, NegativeInfinity, NegativeZero}
 
 // ---------------------------------------------------------------------
-// Ranged domains (VM-AX-6, VM-SUB-0)
+// Ranged domains (VM-LEX-2, VM-SUB-0)
 // ---------------------------------------------------------------------
 
 Natural = { x suchthat x in Integer and x >= 0 }

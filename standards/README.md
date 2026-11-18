@@ -11,7 +11,7 @@ Source Language → [source standard] → .sets domain → [target standard] →
 
 The two sides never refer to each other. A target standard doesn't assume any particular source language.
 
-Three principles shape every standard. VM-PRES-1 and VM-PRES-3 are in the [core source standard](core/source/STANDARD.md#0-principles); VM-PRES-2 is in the [core value model](core/VALUE-MODEL.md):
+Three principles shape every standard. VM-PRES-1 and VM-PRES-2 are in the [core source standard](core/source/STANDARD.md#0-principles); VM-PRES-3 is in the [core value model](core/VALUE-MODEL.md):
 - **Preserve the domain** (VM-PRES-1). A source standard keeps every distinction its language makes. A target standard may merge distinctions it can't represent, but it can't recover one the source never wrote down, so language standards merge and never invent.
 - **Preserve the structure** (VM-PRES-2). How data is structured doesn't change between languages, so a type maps to the structure of its values (fields and values, ordered elements, members), not to the construct the source uses. Wrapper types (a JavaScript `Set`, a `Date` class) map to the structure they wrap, and each language standard states the structure of its own types. Two source types with the same structure are the same domain under two names.
 - **Runtime domains aren't data** (VM-PRES-3). A type that exists only while a program runs (a promise, a lock) maps to a tagged runtime concept from [RUNTIME.md](core/RUNTIME.md), named by the concept, never by the source spelling.

@@ -1,5 +1,5 @@
 // 09-intersection-difference: intersect, record intersection, difference, not in, numeric rules.
-// Rules: CS-INT-1, CS-REF-1, VM-AX-6, CT-INT-1, CT-DIF-1, CT-BLD-2, CT-BLD-5
+// Rules: CS-INT-1, CS-REF-1, VM-LEX-2, CT-INT-1, CT-DIF-1, CT-BLD-2, CT-BLD-5
 //
 // Abstract source:
 //   Small     = int8 & uint8

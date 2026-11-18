@@ -27,7 +27,7 @@ Numbers show the path. The grammar already allows symbols spelled like numbers; 
 <!-- mtoc-start -->
 
 * [Layer 2](#layer-2)
-* [0. Principle: preserve the domain](#0-principle-preserve-the-domain)
+* [0. Runtime domains](#0-runtime-domains)
 * [1. Top-level domains](#1-top-level-domains)
 * [2. Symbols and numbers](#2-symbols-and-numbers)
 * [3. Truth and nothing](#3-truth-and-nothing)
@@ -36,26 +36,11 @@ Numbers show the path. The grammar already allows symbols spelled like numbers; 
 
 <!-- mtoc-end -->
 
-## 0. Principle: preserve the domain
+## 0. Runtime domains
 
-**VM-PRES-2. Preserve the structure of the data.** How data is structured doesn't change between languages. A record is fields and their values, a sequence is ordered elements, and a set is its members, whatever a language calls the type that holds them. A source type maps to the structure of its values, not to the construct the source uses. A struct, an object type and a class instance all hold fields and values, so each maps to a record (VM-REC-1). A class or library type that wraps another structure holds that structure's values and adds none of its own. A JavaScript `Set` is an object whose keys are its members and whose values are empty, so it's a record (VM-SET-1):
+**VM-PRES-3. Runtime domains aren't data.** `.sets` describes data at rest. A type whose values exist only while a program runs (a promise, a function, a lock) isn't data, and its behavior isn't transpiled. It's a *runtime domain*: a tagged domain named by its concept, never by its source spelling. It only has to be unique and equal to itself. It says nothing about bytes, and it's never serialized or checked as data.
 
-```text
-new Set(["a", "b"])   is the value   {("a", ()), ("b", ())}
-```
-
-The empty value may be written `()` or `Phi`; in the core context they're treated as the same (VM-AX-5).
-
-**Collisions.** Two source values may become one `.sets` value only when they have the same structure and the same contents: the same fields, elements or members, and scalars the view doesn't tell apart (VM-PRES-1). Whether two values pass is a matter of their structure, never of what the source calls them. When they pass, they are one `.sets` value, even if the source gives them different types. When they don't, a mapping that makes them one value is a defect.
-
-**Names.** Two source types with the same structure describe the same domain, but each keeps its own name as a declaration. The name records that the source treated them as different types:
-
-```sets
-UserId = String
-Email = String
-```
-
-TypeScript's `type UserId = string` and `type Email = string` are both strings. `UserId` and `Email` are equal domains, and a value of one is a value of the other. The names are still two declarations, so a target can give each its own type. The name never enters the value: tagging the values (`Tagged`, VM-PRES-3) would make them different data, which the source doesn't have.
+The common concepts and their tags are registered in [RUNTIME.md](RUNTIME.md). A JavaScript `Promise<string>` is `Async(String)`, never an atom or domain named `Promise`, so it can't collide with an unrelated type that another language happens to call `Promise`.
 
 ## 1. Top-level domains
 
@@ -73,13 +58,9 @@ This only works when the source makes the distinction. A source without it (Type
 
 **VM-LEX-0. Two parsing layers.** A `.sets` parser has two layers:
 1. **The grammar layer** implements GUIDE only. It splits rosters at unescaped `,`, `{` and `}`, applies GUIDE's whitespace rule, and produces symbols. It gives quotes no special meaning. It keeps escape sequences in the symbol text as written; it only uses them to decide where a symbol ends.
-2. **The value-model layer** implements this document and the `base` rules. It reads each symbol as a number or an atom and decodes escape sequences.
+2. **The value-model layer** implements this document and the `base` rules.
 
-Both readings of the same text must agree. Writing `{a\, b}` satisfies both: the grammar layer sees one symbol because the comma is escaped, and the value-model layer reads it as the atom `a, b`.
-
-An escaped separator isn't a separator. GUIDE's rule that ignores one whitespace byte around a reserved symbol applies only to the unescaped `,`, `{` and `}` of the grammar, never to `\,`, `\{` or `\}`. So in `{a\, b}` the space is part of the atom.
-
-**VM-LEX-2. Numeric symbols are numbers.** A symbol is a number when it starts with a digit (after an optional sign), its spelling is numeric in one of the notations below, and it satisfies `x + 0 = x` (VM-AX-6). Anything else is an atom (GUIDE, pending). An implementation may check the spelling with a pattern and confirm with the identity.
+**VM-LEX-2. Numeric symbols are numbers.** A symbol is a number when it starts with a digit (after an optional sign), its spelling is numeric in one of the notations below, and it satisfies `x + 0 = x` (operators below). Anything else is an atom (GUIDE, pending). An implementation may check the spelling with a pattern and confirm with the identity.
 
 | Notation | Form | Examples |
 | -------- | ---- | -------- |
@@ -96,9 +77,9 @@ An escaped separator isn't a separator. GUIDE's rule that ignores one whitespace
 - **Leading zeros** don't change a decimal: `007` is `7`, never octal; octal is always written `0o`.
 - **Zero.** `-0` and `+0` are the integer `0`; `-0.0` is the fractional `0.0`. IEEE-754 negative zero is neither; it's the atom `NegativeZero` (number axioms, pending).
 
-**Note: not every number can be written.** Every notation is finite, so a rational such as one third has no literal (UP-2). Exponents keep magnitudes short, and hexadecimal floats write every binary64 value exactly (the value nearest 0.1 is `0x1.999999999999Ap-4`). Operators appear in membership rules (VM-AX-6), not as a way of writing values.
+**Note: not every number can be written.** Every notation is finite, so a rational such as one third has no literal (UP-2). Exponents keep magnitudes short, and hexadecimal floats write every binary64 value exactly (the value nearest 0.1 is `0x1.999999999999Ap-4`). Operators appear in membership rules (below), not as a way of writing values.
 
-**VM-AX-6. Numeric operators are mathematical.** Numbers are exact mathematical values with no width (number axioms, pending), so operators on them have their mathematical meaning:
+**Operators are mathematical.** Numbers are exact mathematical values with no width (number axioms, pending), so operators on them have their mathematical meaning:
 - `+`, `-`, `*`, `/` give exact results, with no overflow, rounding or wraparound. `1 / 3` is the exact rational one third. Division by zero has no result.
 - `a ^ n` is exponentiation with an `Integer` exponent `n`. For `n >= 0` it's defined for every number `a` (`0 ^ 0` is `1`); for `n < 0` it's `1 / a ^ (0 - n)` and needs `a` to be non-zero. An exponent that isn't an `Integer` has no result, including `2 ^ 2.0`, so results stay exact rationals: `2 ^ -2` is `0.25`.
 - `%` is defined on `Integer` operands only. The result has the sign of the divisor (mathematical modulo): `-7 % 3` is `2`. A `Fractional` operand (`7.0 % 3`) or a zero divisor gives no result.
@@ -145,7 +126,7 @@ There's no other core null atom. A value that may be absent-as-a-value (a nullab
 
 ## 4. Ranged and described subdomains
 
-**VM-SUB-0. Ranged domains are builders.** A domain bounded by numeric comparisons is written as a builder with VM-AX-6 operators. `base.sets` defines `Natural`, `Int8`…`Int64` and `Uint8`…`Uint64` this way, for example:
+**VM-SUB-0. Ranged domains are builders.** A domain bounded by numeric comparisons is written as a builder with VM-LEX-2 operators. `base.sets` defines `Natural`, `Int8`…`Int64` and `Uint8`…`Uint64` this way, for example:
 
 ```sets
 Int32 = { x suchthat x in Integer and x >= -2147483648 and x <= 2147483647 }
@@ -169,7 +150,7 @@ Binary64Finite = {
 | `Binary64Finite` | `2 ^ 53` | `-1074 … 971` |
 | `Binary32Finite` | `2 ^ 24` | `-149 … 104` |
 
-**Both forms.** By VM-AX-6's result form, `m * 2 ^ e` is an `Integer` when `e >= 0` and a `Fractional` when `e < 0`. A whole number can be built both ways (`2 = 1 * 2 ^ 1 = 4 * 2 ^ -1`), so the float domains contain both forms of every representable whole number: `2` and `2.0` are both members of `Binary64Finite`. Values with a fractional part, such as `0.5`, are members only as `Fractional`. The integer ranges hold one form only: `Int32` requires `x in Integer`, so `1.0` isn't an `Int32`.
+**Both forms.** By VM-LEX-2's result form, `m * 2 ^ e` is an `Integer` when `e >= 0` and a `Fractional` when `e < 0`. A whole number can be built both ways (`2 = 1 * 2 ^ 1 = 4 * 2 ^ -1`), so the float domains contain both forms of every representable whole number: `2` and `2.0` are both members of `Binary64Finite`. Values with a fractional part, such as `0.5`, are members only as `Fractional`. The integer ranges hold one form only: `Int32` requires `x in Integer`, so `1.0` isn't an `Int32`.
 
 `0` and `0.0` are members (`m = 0`); `−0` isn't, because it's the atom `NegativeZero` (number axioms, pending). `Float64` and `Float32` add `IEEESpecial` with `union`. `Binary32Finite` is inside `Binary64Finite`, and every `Int32` is in `Binary64Finite`, both by the rules.
 
@@ -195,13 +176,13 @@ Ambiguities and contradictions in `README.md` (`b52f182`) and `GUIDE.md` (`f5a56
 | - | ----- | --------------- |
 | SI-18 | GUIDE's `base.sets` example lists only `u`, `phi` and the operations, and defines `U = u` and `Phi = phi` as aliases. `base` now also holds the axioms, described subdomains and structural transformers. | [`base.sets`](base.sets) is the full `base`, with `U` and `Phi` and no lowercase aliases. GUIDE's example could point to it. |
 | SI-6 | GUIDE says function parameters must be domains, but `IsOne(x)` and `ToUser(x, y)` take bare parameters. | Core only uses `{X sub D}` and `{x suchthat …}` parameters. |
-| SI-7 | `=`, `sub or =`, `!=` (GUIDE) and `subsetof` (README `Human`) appear but aren't defined. | Not used. `%` is now defined by VM-AX-6. |
+| SI-7 | `=`, `sub or =`, `!=` (GUIDE) and `subsetof` (README `Human`) appear but aren't defined. | Not used. `%` is now defined by VM-LEX-2. |
 | SI-8 | `base` shows a variadic `union({A sub u}, {B sub u}, ...)`; variadic parameters aren't defined. | Binary `union`/`intersect`; a chain nests them, and any nesting means the same (GUIDE, pending). |
 | SI-12 | "`{x} in U` *can* be written as `{x} sub U`" mixes membership and subset. | In a rule, `s sub T` means every member of `s` is in `T` (used by `SetOf`, `Map`, `OnlyKeys`). Pending in GUIDE; see the notes below. |
-| SI-14 | There's no grammar for cardinality, finiteness, string length or patterns. | Prose rules for described subdomains (§4) and the gaps in each standard. Ranges and floating-point domains are covered by VM-AX-6; key uniqueness is in the `Map` builder (VM-MAP-1); finiteness of a language's sets and maps is left to its standard (VM-SET-1, VM-MAP-1). |
+| SI-14 | There's no grammar for cardinality, finiteness, string length or patterns. | Prose rules for described subdomains (§4) and the gaps in each standard. Ranges and floating-point domains are covered by VM-LEX-2; key uniqueness is in the `Map` builder (VM-MAP-1); finiteness of a language's sets and maps is left to its standard (VM-SET-1, VM-MAP-1). |
 | SI-15 | `//` comments are used throughout but aren't part of the grammar. | Allowed; they carry no meaning. |
 | SI-16 | README says TypeScript's `Person \| Aged` is an "intersection". As a domain it's a union of open records whose members can satisfy both branches. | Terminology only. `union(Person, Aged)` with open records (VM-REC-3). |
-| SI-19 | Is arithmetic needed in `.sets` at all? VM-AX-6 operators exist for ranges (`Int32`) and float formats (`m * 2 ^ e`), but they bring evaluation into a language of domains, and the VM-LEX-2 note already avoids literal math. | Open question for the spec author. Arithmetic stays allowed in comparisons and call arguments, and is forbidden inside tuples (GUIDE, pending). |
+| SI-19 | Is arithmetic needed in `.sets` at all? VM-LEX-2 operators exist for ranges (`Int32`) and float formats (`m * 2 ^ e`), but they bring evaluation into a language of domains, and the VM-LEX-2 note already avoids literal math. | Open question for the spec author. Arithmetic stays allowed in comparisons and call arguments, and is forbidden inside tuples (GUIDE, pending). |
 | SI-17 | GUIDE doesn't say how symbols that appear only in a rule (`n` in `("name", n) in r and n in String`) are bound. | Existentially over the whole rule. Pending in GUIDE; see the notes below. |
 
 ### Unsolved problems
@@ -232,7 +213,7 @@ Problems the core standards know about but don't solve yet. These are concerns o
 Decisions made in review that belong in `GUIDE.md`. The standards already rely on them.
 
 1. **Rule precedence and grouping.** Rules follow boolean algebra: arithmetic, then comparisons and membership, then `not`, then `and`, then `or`, each level grouping left to right (except `^`). Parentheses after a name are a call, parentheses around a rule or arithmetic expression group it, and parentheses around values and binders are tuples, which can't contain arithmetic. GUIDE's "Tuples and Vectors" section should say that grouping parentheses aren't values.
-2. **Numeric operators** (VM-AX-6). `^ * / % + -` and `< <= > >=` on numbers, with exact mathematical meaning and no coercion; `^` takes integer exponents and groups right to left. This makes ranged and floating-point domains expressible (`Int32`, `Binary64Finite` as builders), which GUIDE's number discussion could show.
+2. **Numeric operators** (VM-LEX-2). `^ * / % + -` and `< <= > >=` on numbers, with exact mathematical meaning and no coercion; `^` takes integer exponents and groups right to left. This makes ranged and floating-point domains expressible (`Int32`, `Binary64Finite` as builders), which GUIDE's number discussion could show.
 3. **Rule-local binders** (SI-17). A symbol that first appears inside a rule is existential over the rule.
 4. **Names.** `U` and `Phi` are the only spellings of the universal and empty domains; GUIDE's `u` and `phi` aliases go away. A declared domain or function can't be redeclared, which GUIDE's "Domain Validation" section could state.
 5. **Nothing** (VM-AX-5). `Nothing in Phi` declares the one nothing, as a deliberate paradox. `Phi` is the empty domain, not nothing. `()` and `{}` are conceptually equal, not literally. GUIDE's "Tuples and Vectors" section could say so.

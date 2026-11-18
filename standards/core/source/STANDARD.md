@@ -50,9 +50,24 @@ Rule IDs are `CS-*`. Rules moved here from the value model keep their `VM-*` IDs
 
 How much of the domain survives the IR is the measure of a translation's clarity and correctness. When two encodings are both valid, the one that keeps more of the domain is the better one.
 
-**VM-PRES-3. Runtime domains aren't data.** `.sets` describes data at rest. A type whose values exist only while a program runs (a promise, a function, a lock) isn't data, and its behavior isn't transpiled. It's a *runtime domain*: a tagged domain named by its concept, never by its source spelling. It only has to be unique and equal to itself. It says nothing about bytes, and it's never serialized or checked as data.
+**VM-PRES-2. Preserve the structure of the data.** How data is structured doesn't change between languages. A record is fields and their values, a sequence is ordered elements, and a set is its members, whatever a language calls the type that holds them. A source type maps to the structure of its values, not to the construct the source uses. A struct, an object type and a class instance all hold fields and values, so each maps to a record (VM-REC-1). A class or library type that wraps another structure holds that structure's values and adds none of its own. A JavaScript `Set` is an object whose keys are its members and whose values are empty, so it's a record (VM-SET-1):
 
-The common concepts and their tags are registered in [RUNTIME.md](../RUNTIME.md). A JavaScript `Promise<string>` is `Async(String)`, never an atom or domain named `Promise`, so it can't collide with an unrelated type that another language happens to call `Promise`.
+```text
+new Set(["a", "b"])   is the value   {("a", ()), ("b", ())}
+```
+
+The empty value may be written `()` or `Phi`; in the core context they're treated as the same (VM-AX-5).
+
+**Collisions.** Two source values may become one `.sets` value only when they have the same structure and the same contents: the same fields, elements or members, and scalars the view doesn't tell apart (VM-PRES-1). Whether two values pass is a matter of their structure, never of what the source calls them. When they pass, they are one `.sets` value, even if the source gives them different types. When they don't, a mapping that makes them one value is a defect.
+
+**Names.** Two source types with the same structure describe the same domain, but each keeps its own name as a declaration. The name records that the source treated them as different types:
+
+```sets
+UserId = String
+Email = String
+```
+
+TypeScript's `type UserId = string` and `type Email = string` are both strings. `UserId` and `Email` are equal domains, and a value of one is a value of the other. The names are still two declarations, so a target can give each its own type. The name never enters the value: tagging the values (`Tagged`, VM-PRES-3) would make them different data, which the source doesn't have.
 
 ## 1. Scope
 
@@ -341,7 +356,7 @@ Cyclic data isn't a value (GUIDE, pending); a language standard that keeps it en
 
 ### 5.14 Refinements
 
-**CS-REF-1 (Invariant).** Value constraints that the language's type system or schema annotations enforce (ranges, lengths, patterns, non-empty) are part of the domain. Use numeric operators (VM-AX-6), `difference`, `not in`, rosters or predicates when the grammar can express the constraint. Otherwise declare a described subdomain with a prose extent (CS-AX-4):
+**CS-REF-1 (Invariant).** Value constraints that the language's type system or schema annotations enforce (ranges, lengths, patterns, non-empty) are part of the domain. Use numeric operators (VM-LEX-2), `difference`, `not in`, rosters or predicates when the grammar can express the constraint. Otherwise declare a described subdomain with a prose extent (CS-AX-4):
 
 ```sets
 Percent = { x suchthat x in Real and x >= 0 and x <= 100 }
@@ -496,7 +511,7 @@ Totals over 25 constructs: 23 mapped (one of them partly a gap), 1 gap, 1 out of
 
 ## 9. Open Gaps
 
-**G-1. Lengths and patterns.** Numeric ranges are covered by VM-AX-6, but there are no string or collection length operators and no regular expressions. Interim: described subdomains with prose extents (CS-AX-4). *Non-normative proposal:* a `Length` transformer on strings and sequences, and a `Matches` predicate over a pattern string.
+**G-1. Lengths and patterns.** Numeric ranges are covered by VM-LEX-2, but there are no string or collection length operators and no regular expressions. Interim: described subdomains with prose extents (CS-AX-4). *Non-normative proposal:* a `Length` transformer on strings and sequences, and a `Matches` predicate over a pattern string.
 
 **G-2. Cardinality and finiteness.** The grammar can't say that a domain is finite. `SetOf` and `Map` admit infinite domains (VM-SET-1, VM-MAP-1), and `Map` states key uniqueness in its builder. Interim: a language standard narrows its finite collections in prose.
 

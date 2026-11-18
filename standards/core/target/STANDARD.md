@@ -204,7 +204,7 @@ Each rule states its exactness. Examples live in [`../examples/`](../examples/):
 
 **CT-BLD-4 (Invariant). Predicate rules.** A rule that calls a predicate becomes `Checked`, with the predicate emitted per CT-FN-1.
 
-**CT-BLD-5 (Invariant). Numeric rules.** A rule with numeric operators (VM-AX-6) becomes `Checked(R(base), rule)`, where `base` is the domain the member is constrained to. The check uses exact arithmetic: if the native type can overflow or round while evaluating the rule, the generated check uses big-number or rational arithmetic instead. A rule that is only bounds (`x >= lo and x <= hi`) on `Integer` binds by CT-AXB-2 and is exact when a native type has exactly those bounds.
+**CT-BLD-5 (Invariant). Numeric rules.** A rule with numeric operators (VM-LEX-2) becomes `Checked(R(base), rule)`, where `base` is the domain the member is constrained to. The check uses exact arithmetic: if the native type can overflow or round while evaluating the rule, the generated check uses big-number or rational arithmetic instead. A rule that is only bounds (`x >= lo and x <= hi`) on `Integer` binds by CT-AXB-2 and is exact when a native type has exactly those bounds.
 
 ### 5.4 Tuples
 
